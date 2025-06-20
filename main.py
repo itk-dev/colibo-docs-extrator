@@ -19,4 +19,4 @@ doc = client.get_document(77318)
 
 docs = client.get_children(doc['id'])
 for item in docs:
-    exit()
+    print(item['body'])

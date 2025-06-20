@@ -33,6 +33,9 @@ class Client:
         return True
 
     def _html_clean_up(self, html_content):
+        if html_content is None:
+            return None
+
         # Remove CDATA sections
         import re
         html_content = re.sub(r'<!\[CDATA\[(.*?)\]\]>', r'\1', html_content, flags=re.DOTALL)
@@ -62,6 +65,9 @@ class Client:
     def _html_to_markdown(self, html_content):
         """Convert HTML content to Markdown format."""
         try:
+            if html_content is None:
+                return None
+            
             # Configure markdownify with options to handle HTML properly
             markdown_content = markdownify(
                 html_content,
