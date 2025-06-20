@@ -17,5 +17,6 @@ client = Client(COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE)
 
 doc = client.get_document(77318)
 
-from pprint import pprint
-pprint(doc)
+docs = client.get_children(doc['id'])
+for item in docs:
+    exit()
