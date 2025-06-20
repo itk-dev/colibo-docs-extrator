@@ -67,7 +67,7 @@ class Client:
         try:
             if html_content is None:
                 return None
-            
+
             # Configure markdownify with options to handle HTML properly
             markdown_content = markdownify(
                 html_content,
