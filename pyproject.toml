@@ -1,0 +1,9 @@
+[project]
+name = "colibo-docs-extrator"
+version = "0.1.0"
+description = "Extrac documents from colibo"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx==0.28.1",
+    "requests>=2.32.3",
+]
