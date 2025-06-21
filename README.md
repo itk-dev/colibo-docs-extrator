@@ -4,9 +4,9 @@ A synchronization tool that extracts documents from Colibo and uploads them to O
 
 ## Overview
 
-Colibo Loader is a command-line utility that synchronizes documents between Colibo (a document management system) and
-Open WebUI (a knowledge base platform). It allows you to extract documents from Colibo, maintaining their structure, and
-upload them to your Open WebUI knowledge base for enhanced accessibility and AI-powered search.
+Colibo document extractor is a command-line utility that synchronizes documents between Colibo (a document management
+system) and Open WebUI (a knowledge base platform). It allows you to extract documents from Colibo, maintaining their
+structure, and upload them to your Open WebUI knowledge base for enhanced accessibility and AI-powered search.
 
 ## Features
 
@@ -18,7 +18,7 @@ upload them to your Open WebUI knowledge base for enhanced accessibility and AI-
 
 ## Installation
 
-TODO: write about the setup for both local and docke image.
+TODO: write about the setup local (if not using docker image).
 
 ## Configuration
 
@@ -48,8 +48,8 @@ python main.py sync --root-doc-id xxxxx
 
 Options:
 
-- : ID of the root document in Colibo (default: 77318) `--root-doc-id`
-- : Suppress progress display `--quiet`
+- `--root-doc-id`: ID of the root document in Colibo
+- `--quiet`: Suppress progress display
 
 ### Delete a Document
 
@@ -77,30 +77,22 @@ View all synchronized documents:
 python main.py list-docs
 ```
 
-## Project Structure
-
-- `colibo/`: Colibo client implementation
-- `openwebui/`: Open WebUI client implementation
-- `db/`: Database models and synchronization management
-- : Command-line interface and main functionality `main.py`
-
 ## Docker Support
 
 A Dockerfile is provided for containerized deployment.
 Build the container:
 
 ``` bash
-docker build -t colibo-loader .
+docker build -t colibo-document-extrator .
 ```
 
 Run the container:
 
 ``` bash
-docker run --env-file .env colibo-loader python main.py sync
+docker run --rm --env-file .env -v ./sync.db:/app/sync.db colibo-document-extrator --help
 ```
 
 ## Todo
-- 
 
 - Add support for files attached to Colibo documents
 - Make knowledge ID a CLI option
