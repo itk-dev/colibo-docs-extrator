@@ -40,7 +40,6 @@ class Client:
         url = f'{self.base_url}/api/v1/files/?process=true&internal=false'
         response = requests.post(url, headers=headers, data=form_data, files=files)
 
-        print(response.json())
         return response.json()
 
     def update_file_content(self, file_id, content):

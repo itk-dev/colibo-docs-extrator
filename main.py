@@ -28,10 +28,12 @@ logger.setLevel(logging.DEBUG)
 init_db()
 sync_manager = SyncManager()
 
+
 @click.group()
 def cli():
     """My Symfony-style CLI application"""
     pass
+
 
 @cli.command()
 @click.option('--doc-id', default=77318, help='Id of the root document.')
@@ -88,8 +90,25 @@ def sync(doc_id: int = 77318):
                 metadata={
                     'knowledge-id': WEBUI_KNOWLEDGE_ID,
                 })
-            webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, res['id'])
+            webui_doc_id = res['id']
+            webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, webui_doc_id)
             logger.info(f"Successfully uploaded item {item['id']}")
+
+            # Record sync in the database
+            sync_manager.record_sync(
+                colibo_doc_id=item['id'],
+                webui_doc_id=webui_doc_id,
+            )
+
+            # Add a summary at the end
+        total_docs = doc['childCount'] + 1 if doc['childCount'] else 1
+        click.echo("")
+        click.echo(click.style(f"Sync Summary:", fg="blue", bold=True))
+        click.echo(f"Total documents processed: {total_docs}")
+        click.echo(f"Root document: {doc_id} (Colibo)")
+        click.echo("")
+        click.echo(click.style("✓ Sync completed successfully!", fg="green", bold=True))
+
 
 @cli.command()
 @click.option('--colibo-id', help='Colibo document ID to delete', required=True, type=int)
@@ -97,7 +116,7 @@ def delete_doc(colibo_id):
     """Delete a document from WebUI and mark it as deleted in the database."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
 
-    # Get document from database
+    # Get document from the database
     doc = sync_manager.get_document(colibo_id)
     if not doc:
         logger.error(f"Document with Colibo ID {colibo_id} not found in database")
@@ -106,25 +125,59 @@ def delete_doc(colibo_id):
     # Delete from WebUI
     try:
         webui.delete_file(doc.webui_doc_id)
-        logger.info(f"Deleted document {colibo_id} from WebUI")
-
-        # Mark as deleted in database
         sync_manager.mark_deleted(colibo_id)
-        logger.info(f"Marked document {colibo_id} as deleted in database")
+
+        click.echo("")
+        click.echo(click.style("✓ Document deleted successfully!", fg="green", bold=True))
+        click.echo(f"Colibo ID: {colibo_id}")
+        click.echo(f"WebUI ID: {doc.webui_doc_id}")
     except Exception as e:
-        logger.error(f"Failed to delete document {colibo_id}: {str(e)}")
+        click.echo("")
+        click.echo(click.style("✗ Failed to delete document!", fg="red", bold=True))
+        click.echo(f"Error: {str(e)}")
+
 
 @cli.command()
 def list_docs():
     """List all synced documents."""
     docs = sync_manager.get_all_documents(include_deleted=False)
     if not docs:
-        logger.info("No synced documents found")
+        click.echo("No synced documents found")
         return
 
+    # Create a table with Click's formatting
+    headers = ["Colibo ID", "WebUI ID", "Last Synced"]
+    rows = []
+
     for doc in docs:
-        logger.info(f"Colibo ID: {doc.colibo_doc_id}, WebUI ID: {doc.webui_doc_id}, "
-                    f"Title: {doc.title}, Last Synced: {doc.last_synced}")
+        # Format the datetime to be more readable
+        last_synced = doc.last_synced.strftime("%Y-%m-%d %H:%M:%S")
+
+        rows.append([
+            str(doc.colibo_doc_id),
+            doc.webui_doc_id,
+            last_synced,
+        ])
+
+    # Print the table
+    click.echo(click.style("\nSynced Documents:", fg="green", bold=True))
+
+    # Calculate column widths based on content
+    col_widths = [max(len(str(row[i])) for row in [headers] + rows) for i in range(len(headers))]
+
+    # Print header
+    header_row = " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
+    click.echo(click.style(header_row, bold=True))
+    click.echo("-" * len(header_row))
+
+    # Print rows
+    for row in rows:
+        formatted_row = " | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row))
+        click.echo(formatted_row)
+
+    click.echo("-" * len(header_row))
+    click.echo(f"\nTotal: {len(rows)} documents")
+
 
 if __name__ == '__main__':
     cli()
