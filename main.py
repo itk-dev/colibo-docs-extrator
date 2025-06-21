@@ -42,7 +42,6 @@ def sync(doc_id: int = 77318):
     colibo = ColiboClient(COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE)
 
     doc = colibo.get_document(doc_id)
-    logger.info(f"Uploading document {doc['id']}")
     res = webui.upload_from_string(
         content='# ' + doc['title'] + "\n\n" + doc['description'],
         filename="colibo-" + str(doc['id']) + '.md',
@@ -52,63 +51,79 @@ def sync(doc_id: int = 77318):
         })
     webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, res['id'])
 
+    # Record sync in the database
+    sync_manager.record_sync(
+        colibo_doc_id=doc_id,
+        webui_doc_id=res['id'],
+    )
+
     docs = colibo.get_children(doc['id'])
-    for item in docs:
-        # Check if all content fields are None
-        if item['title'] is None and item['description'] is None and item['body'] is None:
-            logger.info(f"Skipping item {item['id']} as all content fields are None")
-            continue
+    total_docs = doc['childCount'] + 1 if doc['childCount'] else 1
 
-        # Prepare content with available data
-        content_parts = []
-        if item['title']:
-            content_parts.append('# ' + item['title'])
-        if item['description']:
-            content_parts.append(item['description'])
-        if item['body']:
-            content_parts.append(item['body'])
+    # Track statistics
+    processed_count = 1  # Start with 1 for the root document
+    skipped_count = 0
+    updated_count = 0
+    new_count = 1
 
-        # Join the content parts with double newlines
-        content = '\n\n'.join(content_parts)
+    # Process each child document with progress bar
+    with click.progressbar(docs, label="Syncing documents", length=total_docs) as bar:
+        for item in bar:
+            # Check if all content fields are None
+            if item['title'] is None and item['description'] is None and item['body'] is None:
+                skipped_count += 1
+                continue
 
-        # Check if the document already exists
-        existing = sync_manager.get_document(item['id'])
+            # Prepare content with available data
+            content_parts = []
+            if item['title']:
+                content_parts.append('# ' + item['title'])
+            if item['description']:
+                content_parts.append(item['description'])
+            if item['body']:
+                content_parts.append(item['body'])
 
-        if existing:
-            # Update existing document
-            logger.info(f"Updating item {item['id']}")
-            res = webui.update_file_content(existing.webui_doc_id, content)
+            # Join the content parts with double newlines
+            content = '\n\n'.join(content_parts)
 
-            ## TODO: handle update result?
+            # Check if the document already exists
+            existing = sync_manager.get_document(item['id'])
 
-            logger.info(f"Successfully updated item {item['id']}")
-        else:
-            res = webui.upload_from_string(
-                content=content,
-                filename="colibo-" + str(item['id']) + '.md',
-                content_type='text/markdown',
-                metadata={
-                    'knowledge-id': WEBUI_KNOWLEDGE_ID,
-                })
-            webui_doc_id = res['id']
-            webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, webui_doc_id)
-            logger.info(f"Successfully uploaded item {item['id']}")
+            if existing:
+                # Update existing document
+                res = webui.update_file_content(existing.webui_doc_id, content)
+                ## TODO check that the doc restructured successfully
+                updated_count += 1
+            else:
+                res = webui.upload_from_string(
+                    content=content,
+                    filename="colibo-" + str(item['id']) + '.md',
+                    content_type='text/markdown',
+                    metadata={
+                        'knowledge-id': WEBUI_KNOWLEDGE_ID,
+                    })
+                webui_doc_id = res['id']
+                webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, webui_doc_id)
+                new_count += 1
 
-            # Record sync in the database
-            sync_manager.record_sync(
-                colibo_doc_id=item['id'],
-                webui_doc_id=webui_doc_id,
-            )
+                # Record sync in the database
+                sync_manager.record_sync(
+                    colibo_doc_id=item['id'],
+                    webui_doc_id=webui_doc_id,
+                )
 
-            # Add a summary at the end
-        total_docs = doc['childCount'] + 1 if doc['childCount'] else 1
-        click.echo("")
-        click.echo(click.style(f"Sync Summary:", fg="blue", bold=True))
-        click.echo(f"Total documents processed: {total_docs}")
-        click.echo(f"Root document: {doc_id} (Colibo)")
-        click.echo("")
-        click.echo(click.style("✓ Sync completed successfully!", fg="green", bold=True))
+            processed_count += 1
 
+    # Add a summary at the end
+    click.echo("")
+    click.echo(click.style(f"Sync Summary:", fg="blue", bold=True))
+    click.echo(f"Total documents processed: {processed_count}")
+    click.echo(f"New documents created: {new_count}")
+    click.echo(f"Existing documents updated: {updated_count}")
+    click.echo(f"Documents skipped: {skipped_count}")
+    click.echo(f"Root document: {doc_id} (Colibo)")
+    click.echo("")
+    click.echo(click.style("✓ Sync completed successfully!", fg="green", bold=True))
 
 @cli.command()
 @click.option('--colibo-id', help='Colibo document ID to delete', required=True, type=int)
