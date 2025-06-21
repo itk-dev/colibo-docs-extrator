@@ -36,11 +36,31 @@ webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, res['id'])
 
 docs = colibo.get_children(doc['id'])
 for item in docs:
-    res = webui.upload_from_string(
-        content='# ' + item['title'] + "\n\n" + item['description'] + "\n\n" + item['body'],
-        filename="colibo-" + str(item['id']) + '.md',
-        content_type='text/markdown',
-        metadata={
-            'knowledge-id': WEBUI_KNOWLEDGE_ID,
-    })
-    webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, res['id'])
+    # Check if all content fields are None
+    if item['title'] is None and item['description'] is None and item['body'] is None:
+        logger.info(f"Skipping item {item['id']} as all content fields are None")
+        continue
+
+    # Prepare content with available data
+    content_parts = []
+    if item['title']:
+        content_parts.append('# ' + item['title'])
+    if item['description']:
+        content_parts.append(item['description'])
+    if item['body']:
+        content_parts.append(item['body'])
+
+    # Join the content parts with double newlines
+    content = '\n\n'.join(content_parts)
+
+    # Only upload if we have content
+    if content:
+        res = webui.upload_from_string(
+            content=content,
+            filename="colibo-" + str(item['id']) + '.md',
+            content_type='text/markdown',
+            metadata={
+                'knowledge-id': WEBUI_KNOWLEDGE_ID,
+            })
+        webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, res['id'])
+        logger.info(f"Successfully uploaded item {item['id']}")
