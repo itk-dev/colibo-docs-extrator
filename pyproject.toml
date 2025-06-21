@@ -1,9 +1,18 @@
 [project]
 name = "colibo-docs-extrator"
 version = "0.1.0"
-description = "Extrac documents from colibo"
+description = "Extract documents from colibo"
 requires-python = ">=3.11"
 dependencies = [
     "httpx==0.28.1",
     "requests>=2.32.3",
+    "click>=8.1.0",
+    "python-dotenv>=1.0.0",
 ]
+
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["colibo", "openwebui"
