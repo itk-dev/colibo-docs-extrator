@@ -34,7 +34,7 @@ sync_manager = SyncManager()
 
 @click.group()
 def cli():
-    """My Symfony-style CLI application"""
+    """Calibo document synchronization tool."""
     pass
 
 
@@ -43,10 +43,18 @@ def silent_progressbar(iterable, **kwargs):
     """A context manager that yields the iterable without displaying progress."""
     yield iterable
 
+###
+# @todo:
+#   - files attached in calibo docs
+#   - maybe move knowledge id to CLI option
+#   - validation of knowledge id
+###
+
 @cli.command()
 @click.option('--root-doc-id', default=77318, help='Id of the root document.')
 @click.option('--quiet', is_flag=True, help='Do not display progress.')
 def sync(root_doc_id: int = 77318, quiet: bool = False):
+    """Synchronize documents from Colibo to Open-Webui."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
     colibo = ColiboClient(COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE)
 
@@ -144,6 +152,7 @@ def sync(root_doc_id: int = 77318, quiet: bool = False):
     echo("")
     echo(click.style("✓ Sync completed successfully!", fg="green", bold=True))
 
+
 @cli.command()
 @click.option('--colibo-id', help='Colibo document ID to delete', required=True, type=int)
 def delete_doc(colibo_id):
@@ -170,6 +179,7 @@ def delete_doc(colibo_id):
         click.echo("")
         click.echo(click.style("✗ Failed to delete document!", fg="red", bold=True))
         click.echo(f"Error: {str(e)}")
+
 
 @cli.command()
 @click.option('--confirm', is_flag=True, help='Confirm deletion without prompting')
@@ -227,6 +237,7 @@ def delete_all_docs(confirm):
                 click.echo(f"  - Colibo ID: {colibo_id}, WebUI ID: {webui_id}")
                 click.echo(f"    Error: {error}")
 
+
 @cli.command()
 def list_docs():
     """List all synced documents."""
@@ -271,4 +282,3 @@ def list_docs():
 
 if __name__ == '__main__':
     cli()
-
