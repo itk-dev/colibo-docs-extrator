@@ -9,17 +9,13 @@ class SyncManager:
         """Initialize with an optional session."""
         self.session = session or get_session()
 
-    def record_sync(self, colibo_doc_id, webui_doc_id, title=None, filename=None):
+    def record_sync(self, colibo_doc_id, webui_doc_id):
         """Record a new sync or update existing record."""
         doc = self.session.query(SyncedDocument).filter_by(colibo_doc_id=colibo_doc_id).first()
 
         if doc:
             # Update existing record
             doc.webui_doc_id = webui_doc_id
-            if title:
-                doc.title = title
-            if filename:
-                doc.filename = filename
             doc.last_synced = datetime.utcnow()
             doc.is_deleted = False
         else:
@@ -27,8 +23,6 @@ class SyncManager:
             doc = SyncedDocument(
                 colibo_doc_id=colibo_doc_id,
                 webui_doc_id=webui_doc_id,
-                title=title,
-                filename=filename or f"colibo-{colibo_doc_id}.md"
             )
             self.session.add(doc)
 

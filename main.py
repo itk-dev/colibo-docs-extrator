@@ -69,8 +69,18 @@ def sync(doc_id: int = 77318):
         # Join the content parts with double newlines
         content = '\n\n'.join(content_parts)
 
-        # Only upload if we have content
-        if content:
+        # Check if the document already exists
+        existing = sync_manager.get_document(item['id'])
+
+        if existing:
+            # Update existing document
+            logger.info(f"Updating item {item['id']}")
+            res = webui.update_file_content(existing.webui_doc_id, content)
+
+            ## TODO: handle update result?
+
+            logger.info(f"Successfully updated item {item['id']}")
+        else:
             res = webui.upload_from_string(
                 content=content,
                 filename="colibo-" + str(item['id']) + '.md',
@@ -80,6 +90,41 @@ def sync(doc_id: int = 77318):
                 })
             webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, res['id'])
             logger.info(f"Successfully uploaded item {item['id']}")
+
+@cli.command()
+@click.option('--colibo-id', help='Colibo document ID to delete', required=True, type=int)
+def delete_doc(colibo_id):
+    """Delete a document from WebUI and mark it as deleted in the database."""
+    webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
+
+    # Get document from database
+    doc = sync_manager.get_document(colibo_id)
+    if not doc:
+        logger.error(f"Document with Colibo ID {colibo_id} not found in database")
+        return
+
+    # Delete from WebUI
+    try:
+        webui.delete_file(doc.webui_doc_id)
+        logger.info(f"Deleted document {colibo_id} from WebUI")
+
+        # Mark as deleted in database
+        sync_manager.mark_deleted(colibo_id)
+        logger.info(f"Marked document {colibo_id} as deleted in database")
+    except Exception as e:
+        logger.error(f"Failed to delete document {colibo_id}: {str(e)}")
+
+@cli.command()
+def list_docs():
+    """List all synced documents."""
+    docs = sync_manager.get_all_documents(include_deleted=False)
+    if not docs:
+        logger.info("No synced documents found")
+        return
+
+    for doc in docs:
+        logger.info(f"Colibo ID: {doc.colibo_doc_id}, WebUI ID: {doc.webui_doc_id}, "
+                    f"Title: {doc.title}, Last Synced: {doc.last_synced}")
 
 if __name__ == '__main__':
     cli()
