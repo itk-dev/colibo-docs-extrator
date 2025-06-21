@@ -7,12 +7,15 @@ from dotenv import load_dotenv
 from colibo.client import Client as ColiboClient
 from openwebui.client import Client as WebUIClient
 
-load_dotenv()
+from db.models import init_db
+from db.sync_manager import SyncManager
 
+load_dotenv()
+# Colibo settings
 COLIBO_CLIENT_ID = os.environ.get("COLIBO_CLIENT_ID")
 COLIBO_CLIENT_SECRET = os.environ.get("COLIBO_CLIENT_SECRET")
 COLIBO_SCOPE = os.environ.get("COLIBO_SCOPE")
-
+# Open-webui settings
 WEBUI_BASE_URL = os.environ.get("WEBUI_BASE_URL")
 WEBUI_TOKEN = os.environ.get("WEBUI_TOKEN")
 WEBUI_KNOWLEDGE_ID = os.environ.get("WEBUI_KNOWLEDGE_ID")
@@ -21,25 +24,23 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger("LeantimeMCP")
 logger.setLevel(logging.DEBUG)
 
+# Initialize database
+init_db()
+sync_manager = SyncManager()
+
 @click.group()
 def cli():
     """My Symfony-style CLI application"""
     pass
 
 @cli.command()
-@click.argument('name')
-@click.option('--count', default=1, help='Number of greetings.')
-def hello(name, count):
-    """Simple command that greets NAME for COUNT times."""
-    for _ in range(count):
-        click.echo(f'Hello {name}!')
-
-@cli.command()
-def sync():
+@click.option('--doc-id', default=77318, help='Id of the root document.')
+def sync(doc_id: int = 77318):
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
     colibo = ColiboClient(COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE)
 
-    doc = colibo.get_document(77318)
+    doc = colibo.get_document(doc_id)
+    logger.info(f"Uploading document {doc['id']}")
     res = webui.upload_from_string(
         content='# ' + doc['title'] + "\n\n" + doc['description'],
         filename="colibo-" + str(doc['id']) + '.md',
