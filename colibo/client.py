@@ -147,7 +147,7 @@ class Client:
         }
         response = requests.get(f'https://intranet.aarhuskommune.dk/api/documents/{document_id}/children', headers=headers)
 
-        # Check if response is successful
+        # Check if the response is successful
         response.raise_for_status()
 
         # Parse the JSON response

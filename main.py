@@ -42,6 +42,7 @@ def sync(doc_id: int = 77318):
     colibo = ColiboClient(COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE)
 
     doc = colibo.get_document(doc_id)
+    click.echo(f"Syncing root document {doc_id} (Colibo)")
     res = webui.upload_from_string(
         content='# ' + doc['title'] + "\n\n" + doc['description'],
         filename="colibo-" + str(doc['id']) + '.md',
@@ -66,8 +67,8 @@ def sync(doc_id: int = 77318):
     updated_count = 0
     new_count = 1
 
-    # Process each child document with progress bar
-    with click.progressbar(docs, label="Syncing documents", length=total_docs) as bar:
+    # Process each child document with a progress bar
+    with click.progressbar(docs, label="Syncing child documents", length=total_docs) as bar:
         for item in bar:
             # Check if all content fields are None
             if item['title'] is None and item['description'] is None and item['body'] is None:
@@ -103,7 +104,8 @@ def sync(doc_id: int = 77318):
                         'knowledge-id': WEBUI_KNOWLEDGE_ID,
                     })
                 webui_doc_id = res['id']
-                webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, webui_doc_id)
+                red = webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, webui_doc_id)
+                ## TODO check that the doc is add to the knowledge successfully
                 new_count += 1
 
                 # Record sync in the database
@@ -139,6 +141,7 @@ def delete_doc(colibo_id):
 
     # Delete from WebUI
     try:
+        webui.remove_file_from_knowledge(WEBUI_KNOWLEDGE_ID, doc.webui_doc_id)
         webui.delete_file(doc.webui_doc_id)
         sync_manager.delete_document(colibo_id)
 
@@ -181,6 +184,7 @@ def delete_all_docs(confirm):
         for doc in bar:
             try:
                 # Delete from WebUI
+                webui.remove_file_from_knowledge(WEBUI_KNOWLEDGE_ID, doc.webui_doc_id)
                 webui.delete_file(doc.webui_doc_id)
 
                 # Delete from database
