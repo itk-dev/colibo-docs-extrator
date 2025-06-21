@@ -29,12 +29,11 @@ class SyncManager:
         self.session.commit()
         return doc
 
-    def mark_deleted(self, colibo_doc_id):
-        """Mark a document as deleted."""
+    def delete_document(self, colibo_doc_id):
+        """Permanently delete a document from the database."""
         doc = self.session.query(SyncedDocument).filter_by(colibo_doc_id=colibo_doc_id).first()
         if doc:
-            doc.is_deleted = True
-            doc.last_synced = datetime.utcnow()
+            self.session.delete(doc)
             self.session.commit()
         return doc
 

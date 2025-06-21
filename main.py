@@ -119,13 +119,13 @@ def delete_doc(colibo_id):
     # Get document from the database
     doc = sync_manager.get_document(colibo_id)
     if not doc:
-        logger.error(f"Document with Colibo ID {colibo_id} not found in database")
+        click.echo(click.style(f"Document with Colibo ID {colibo_id} not found in database", fg="red", bold=True))
         return
 
     # Delete from WebUI
     try:
         webui.delete_file(doc.webui_doc_id)
-        sync_manager.mark_deleted(colibo_id)
+        sync_manager.delete_document(colibo_id)
 
         click.echo("")
         click.echo(click.style("✓ Document deleted successfully!", fg="green", bold=True))
@@ -136,6 +136,60 @@ def delete_doc(colibo_id):
         click.echo(click.style("✗ Failed to delete document!", fg="red", bold=True))
         click.echo(f"Error: {str(e)}")
 
+@cli.command()
+@click.option('--confirm', is_flag=True, help='Confirm deletion without prompting')
+def delete_all_docs(confirm):
+    """Delete all documents from WebUI and remove them from the database."""
+    webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
+
+    # Get all documents
+    docs = sync_manager.get_all_documents(include_deleted=True)
+    if not docs:
+        click.echo(click.style("No documents found to delete", fg="yellow", bold=True))
+        return
+
+    # Confirm deletion
+    if not confirm:
+        click.echo(f"This will delete {len(docs)} documents from WebUI and the database.")
+        click.echo(click.style("WARNING: This action cannot be undone!", fg="red", bold=True))
+        if not click.confirm("Do you want to continue?"):
+            click.echo("Operation cancelled.")
+            return
+
+    # Track statistics
+    success_count = 0
+    error_count = 0
+    errors = []
+
+    # Process each document
+    with click.progressbar(docs, label="Deleting documents") as bar:
+        for doc in bar:
+            try:
+                # Delete from WebUI
+                webui.delete_file(doc.webui_doc_id)
+
+                # Delete from database
+                sync_manager.delete_document(doc.colibo_doc_id)
+
+                success_count += 1
+            except Exception as e:
+                error_count += 1
+                errors.append((doc.colibo_doc_id, doc.webui_doc_id, str(e)))
+
+    # Print summary
+    click.echo("")
+    if success_count > 0:
+        click.echo(click.style(f"✓ Successfully deleted {success_count} documents", fg="green", bold=True))
+
+    if error_count > 0:
+        click.echo(click.style(f"✗ Failed to delete {error_count} documents", fg="red", bold=True))
+
+        # Show errors if there are any
+        if errors:
+            click.echo("\nErrors:")
+            for colibo_id, webui_id, error in errors:
+                click.echo(f"  - Colibo ID: {colibo_id}, WebUI ID: {webui_id}")
+                click.echo(f"    Error: {error}")
 
 @cli.command()
 def list_docs():
