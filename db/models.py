@@ -14,7 +14,6 @@ class SyncedDocument(Base):
     colibo_doc_id = Column(Integer, nullable=False, unique=True, index=True)
     webui_doc_id = Column(String, nullable=False)
     last_synced = Column(DateTime, default=datetime.utcnow)
-    is_deleted = Column(Boolean, default=False)
 
     def __repr__(self):
         return f"<SyncedDocument(colibo_id={self.colibo_doc_id}, webui_id={self.webui_doc_id})>"

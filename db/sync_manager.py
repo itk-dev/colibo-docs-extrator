@@ -10,16 +10,15 @@ class SyncManager:
         self.session = session or get_session()
 
     def record_sync(self, colibo_doc_id, webui_doc_id):
-        """Record a new sync or update existing record."""
+        """Record a new sync or update an existing record."""
         doc = self.session.query(SyncedDocument).filter_by(colibo_doc_id=colibo_doc_id).first()
 
         if doc:
             # Update existing record
             doc.webui_doc_id = webui_doc_id
             doc.last_synced = datetime.utcnow()
-            doc.is_deleted = False
         else:
-            # Create new record
+            # Create a new record
             doc = SyncedDocument(
                 colibo_doc_id=colibo_doc_id,
                 webui_doc_id=webui_doc_id,
@@ -41,11 +40,9 @@ class SyncManager:
         """Get a synced document by Colibo ID."""
         return self.session.query(SyncedDocument).filter_by(colibo_doc_id=colibo_doc_id).first()
 
-    def get_all_documents(self, include_deleted=False):
+    def get_all_documents(self):
         """Get all synced documents."""
         query = self.session.query(SyncedDocument)
-        if not include_deleted:
-            query = query.filter_by(is_deleted=False)
         return query.all()
 
     def get_webui_id(self, colibo_doc_id):

@@ -1,6 +1,9 @@
-import os
-import logging
 import click
+import contextlib
+import io
+import logging
+import os
+
 
 from dotenv import load_dotenv
 
@@ -35,14 +38,25 @@ def cli():
     pass
 
 
+@contextlib.contextmanager
+def silent_progressbar(iterable, **kwargs):
+    """A context manager that yields the iterable without displaying progress."""
+    yield iterable
+
 @cli.command()
-@click.option('--doc-id', default=77318, help='Id of the root document.')
-def sync(doc_id: int = 77318):
+@click.option('--root-doc-id', default=77318, help='Id of the root document.')
+@click.option('--quiet', is_flag=True, help='Do not display progress.')
+def sync(root_doc_id: int = 77318, quiet: bool = False):
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
     colibo = ColiboClient(COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE)
 
-    doc = colibo.get_document(doc_id)
-    click.echo(f"Syncing root document {doc_id} (Colibo)")
+    # Custom echo function that respects the quiet flag
+    def echo(*args, **kwargs):
+        if not quiet:
+            click.echo(*args, **kwargs)
+
+    doc = colibo.get_document(root_doc_id)
+    echo(f"Syncing root document {root_doc_id} (Colibo)")
     res = webui.upload_from_string(
         content='# ' + doc['title'] + "\n\n" + doc['description'],
         filename="colibo-" + str(doc['id']) + '.md',
@@ -54,7 +68,7 @@ def sync(doc_id: int = 77318):
 
     # Record sync in the database
     sync_manager.record_sync(
-        colibo_doc_id=doc_id,
+        colibo_doc_id=root_doc_id,
         webui_doc_id=res['id'],
     )
 
@@ -67,8 +81,11 @@ def sync(doc_id: int = 77318):
     updated_count = 0
     new_count = 1
 
+    # Choose the appropriate progress bar based on the quiet flag
+    progress_context = silent_progressbar if quiet else click.progressbar
+
     # Process each child document with a progress bar
-    with click.progressbar(docs, label="Syncing child documents", length=total_docs) as bar:
+    with progress_context(docs, label="Syncing child documents", length=total_docs) as bar:
         for item in bar:
             # Check if all content fields are None
             if item['title'] is None and item['description'] is None and item['body'] is None:
@@ -117,15 +134,15 @@ def sync(doc_id: int = 77318):
             processed_count += 1
 
     # Add a summary at the end
-    click.echo("")
-    click.echo(click.style(f"Sync Summary:", fg="blue", bold=True))
-    click.echo(f"Total documents processed: {processed_count}")
-    click.echo(f"New documents created: {new_count}")
-    click.echo(f"Existing documents updated: {updated_count}")
-    click.echo(f"Documents skipped: {skipped_count}")
-    click.echo(f"Root document: {doc_id} (Colibo)")
-    click.echo("")
-    click.echo(click.style("✓ Sync completed successfully!", fg="green", bold=True))
+    echo("")
+    echo(click.style(f"Sync Summary:", fg="blue", bold=True))
+    echo(f"Total documents processed: {processed_count}")
+    echo(f"New documents created: {new_count}")
+    echo(f"Existing documents updated: {updated_count}")
+    echo(f"Documents skipped: {skipped_count}")
+    echo(f"Root document: {root_doc_id} (Colibo)")
+    echo("")
+    echo(click.style("✓ Sync completed successfully!", fg="green", bold=True))
 
 @cli.command()
 @click.option('--colibo-id', help='Colibo document ID to delete', required=True, type=int)
@@ -133,7 +150,7 @@ def delete_doc(colibo_id):
     """Delete a document from WebUI and mark it as deleted in the database."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
 
-    # Get document from the database
+    # Get a document from the database
     doc = sync_manager.get_document(colibo_id)
     if not doc:
         click.echo(click.style(f"Document with Colibo ID {colibo_id} not found in database", fg="red", bold=True))
@@ -161,7 +178,7 @@ def delete_all_docs(confirm):
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
 
     # Get all documents
-    docs = sync_manager.get_all_documents(include_deleted=True)
+    docs = sync_manager.get_all_documents()
     if not docs:
         click.echo(click.style("No documents found to delete", fg="yellow", bold=True))
         return
@@ -213,7 +230,7 @@ def delete_all_docs(confirm):
 @cli.command()
 def list_docs():
     """List all synced documents."""
-    docs = sync_manager.get_all_documents(include_deleted=False)
+    docs = sync_manager.get_all_documents()
     if not docs:
         click.echo("No synced documents found")
         return
