@@ -70,9 +70,8 @@ def sync(root_doc_id, quiet: bool = False):
         content='# ' + doc['title'] + "\n\n" + doc['description'],
         filename="colibo-" + str(doc['id']) + '.md',
         content_type='text/markdown',
-        metadata={
-            'knowledge-id': WEBUI_KNOWLEDGE_ID,
-        })
+        metadata={}
+    )
     webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, res['id'])
 
     # Record sync in the database
@@ -126,9 +125,8 @@ def sync(root_doc_id, quiet: bool = False):
                     content=content,
                     filename="colibo-" + str(item['id']) + '.md',
                     content_type='text/markdown',
-                    metadata={
-                        'knowledge-id': WEBUI_KNOWLEDGE_ID,
-                    })
+                    metadata={}
+                )
                 webui_doc_id = res['id']
                 red = webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, webui_doc_id)
                 ## TODO check that the doc is add to the knowledge successfully
@@ -280,6 +278,21 @@ def list_docs():
     click.echo("-" * len(header_row))
     click.echo(f"\nTotal: {len(rows)} documents")
 
+@cli.command()
+@click.option('--knowledge-id', help='ID of the knowledge resource to retrieve', default=WEBUI_KNOWLEDGE_ID)
+def get_knowledge(knowledge_id):
+    """Retrieve information about a specific knowledge resource."""
+    webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
+
+    try:
+        knowledge = webui.get_knowledge(knowledge_id)
+        click.echo(click.style(f"✓ Knowledge resource found:", fg="green", bold=True))
+        click.echo(f"ID: {knowledge['id']}")
+        click.echo(f"Name: {knowledge['name']}")
+        click.echo(f"Description: {knowledge['description']}")
+    except Exception as e:
+        click.echo(click.style("✗ Failed to retrieve knowledge resource!", fg="red", bold=True))
+        click.echo(f"Error: {str(e)}")
 
 if __name__ == '__main__':
     cli()

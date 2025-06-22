@@ -135,3 +135,27 @@ class Client:
         url = f'{self.base_url}/api/v1/knowledge/{knowledge_id}/file/remove'
         response = requests.post(url, headers=headers, json=data)
         return response
+
+    def get_knowledge(self, knowledge_id):
+        """
+        Retrieve information about a specific knowledge resource.
+
+        Args:
+            knowledge_id (str): The ID of the knowledge resource to retrieve
+
+        Returns:
+            Response object from the API request
+        """
+        headers = {
+            'Authorization': f'Bearer {self.token}',
+            'accept': 'application/json'
+        }
+
+        url = f'{self.base_url}/api/v1/knowledge/{knowledge_id}'
+        response = requests.get(url, headers=headers)
+
+        # Check if the response status code is 200
+        if response.status_code != 200:
+            raise Exception(f"API request failed with status code {response.status_code}: {response.text}")
+
+        return response.json()
