@@ -26,6 +26,7 @@ Create a file in the project root with the following variables: `.env`
 
 ``` 
 # Colibo settings
+COLIBO_BASE_URL=https://xxxx
 COLIBO_CLIENT_ID=your_client_id
 COLIBO_CLIENT_SECRET=your_client_secret
 COLIBO_SCOPE=your_scope
@@ -97,6 +98,7 @@ docker run --rm --env-file .env -v ./sync.db:/app/sync.db colibo-document-extrat
 - Add support for files attached to Colibo documents
 - Make knowledge ID a CLI option
 - Implement validation for knowledge ID
+- Use docs delete field
 
 ## License
 

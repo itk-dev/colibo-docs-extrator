@@ -1,6 +1,5 @@
 import click
 import contextlib
-import io
 import logging
 import os
 
@@ -15,6 +14,7 @@ from db.sync_manager import SyncManager
 
 load_dotenv()
 # Colibo settings
+COLIBO_BASE_URL=os.environ.get("COLIBO_BASE_URL")
 COLIBO_CLIENT_ID = os.environ.get("COLIBO_CLIENT_ID")
 COLIBO_CLIENT_SECRET = os.environ.get("COLIBO_CLIENT_SECRET")
 COLIBO_SCOPE = os.environ.get("COLIBO_SCOPE")
@@ -24,7 +24,7 @@ WEBUI_TOKEN = os.environ.get("WEBUI_TOKEN")
 WEBUI_KNOWLEDGE_ID = os.environ.get("WEBUI_KNOWLEDGE_ID")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-logger = logging.getLogger("LeantimeMCP")
+logger = logging.getLogger("colibo-sync")
 logger.setLevel(logging.DEBUG)
 
 # Initialize database
@@ -48,15 +48,16 @@ def silent_progressbar(iterable, **kwargs):
 #   - files attached in calibo docs
 #   - maybe move knowledge id to CLI option
 #   - validation of knowledge id
+#   - Use docs delete field
 ###
 
 @cli.command()
-@click.option('--root-doc-id', default=77318, help='Id of the root document.')
+@click.option('--root-doc-id', help='Id of the root document.')
 @click.option('--quiet', is_flag=True, help='Do not display progress.')
-def sync(root_doc_id: int = 77318, quiet: bool = False):
+def sync(root_doc_id, quiet: bool = False):
     """Synchronize documents from Colibo to Open-Webui."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
-    colibo = ColiboClient(COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE)
+    colibo = ColiboClient(COLIBO_BASE_URL, COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE)
 
     # Custom echo function that respects the quiet flag
     def echo(*args, **kwargs):

@@ -4,7 +4,8 @@ from markdownify import markdownify
 import requests
 
 class Client:
-    def __init__(self, client_id, client_secret, scope):
+    def __init__(self, base_url, client_id, client_secret, scope):
+        self.base_url = base_url
         self.client_id = client_id
         self.client_secret = client_secret
         self.scope = scope
@@ -27,7 +28,7 @@ class Client:
             'grant_type': 'client_credentials',
             'scope': self.scope
         }
-        response = requests.post('https://intranet.aarhuskommune.dk/auth/oauth2/connect/token', data=data)
+        response = requests.post(f'{self.base_url}/auth/oauth2/connect/token', data=data)
         self.access_token = response.json()['access_token']
 
         return True
@@ -92,9 +93,9 @@ class Client:
             'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/json'
         }
-        response = requests.get(f'https://intranet.aarhuskommune.dk/api/documents/{document_id}', headers=headers)
+        response = requests.get(f'{self.base_url}/api/documents/{document_id}', headers=headers)
 
-        # Check if response is successful
+        # Check if the response is successful
         response.raise_for_status()
 
         # Parse the JSON response
@@ -145,7 +146,7 @@ class Client:
             'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/json'
         }
-        response = requests.get(f'https://intranet.aarhuskommune.dk/api/documents/{document_id}/children', headers=headers)
+        response = requests.get(f'{self.base_url}/api/documents/{document_id}/children', headers=headers)
 
         # Check if the response is successful
         response.raise_for_status()
