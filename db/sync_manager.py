@@ -2,6 +2,7 @@
 from datetime import datetime
 from .models import SyncedDocument, get_session
 
+
 class SyncManager:
     """Manager class for document synchronization operations."""
 
@@ -11,7 +12,11 @@ class SyncManager:
 
     def record_sync(self, colibo_doc_id, webui_doc_id):
         """Record a new sync or update an existing record."""
-        doc = self.session.query(SyncedDocument).filter_by(colibo_doc_id=colibo_doc_id).first()
+        doc = (
+            self.session.query(SyncedDocument)
+            .filter_by(colibo_doc_id=colibo_doc_id)
+            .first()
+        )
 
         if doc:
             # Update existing record
@@ -30,7 +35,11 @@ class SyncManager:
 
     def delete_document(self, colibo_doc_id):
         """Permanently delete a document from the database."""
-        doc = self.session.query(SyncedDocument).filter_by(colibo_doc_id=colibo_doc_id).first()
+        doc = (
+            self.session.query(SyncedDocument)
+            .filter_by(colibo_doc_id=colibo_doc_id)
+            .first()
+        )
         if doc:
             self.session.delete(doc)
             self.session.commit()
@@ -38,7 +47,11 @@ class SyncManager:
 
     def get_document(self, colibo_doc_id):
         """Get a synced document by Colibo ID."""
-        return self.session.query(SyncedDocument).filter_by(colibo_doc_id=colibo_doc_id).first()
+        return (
+            self.session.query(SyncedDocument)
+            .filter_by(colibo_doc_id=colibo_doc_id)
+            .first()
+        )
 
     def get_all_documents(self):
         """Get all synced documents."""

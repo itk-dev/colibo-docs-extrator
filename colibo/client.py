@@ -3,6 +3,7 @@ from markdownify import markdownify
 
 import requests
 
+
 class Client:
     def __init__(self, base_url, client_id, client_secret, scope):
         self.base_url = base_url
@@ -23,13 +24,15 @@ class Client:
 
     def _get_access_token(self):
         data = {
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
-            'grant_type': 'client_credentials',
-            'scope': self.scope
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "grant_type": "client_credentials",
+            "scope": self.scope,
         }
-        response = requests.post(f'{self.base_url}/auth/oauth2/connect/token', data=data)
-        self.access_token = response.json()['access_token']
+        response = requests.post(
+            f"{self.base_url}/auth/oauth2/connect/token", data=data
+        )
+        self.access_token = response.json()["access_token"]
 
         return True
 
@@ -39,27 +42,30 @@ class Client:
 
         # Remove CDATA sections
         import re
-        html_content = re.sub(r'<!\[CDATA\[(.*?)\]\]>', r'\1', html_content, flags=re.DOTALL)
+
+        html_content = re.sub(
+            r"<!\[CDATA\[(.*?)\]\]>", r"\1", html_content, flags=re.DOTALL
+        )
 
         # Remove extra whitespace
-        html_content = ' '.join(html_content.split())
+        html_content = " ".join(html_content.split())
 
         # Remove common problematic elements or replace them with better tags
-        html_content = html_content.replace('&nbsp;', ' ')
+        html_content = html_content.replace("&nbsp;", " ")
 
         # Fix common HTML issues
-        html_content = html_content.replace('<br>', '<br />')
+        html_content = html_content.replace("<br>", "<br />")
 
         # Remove any HTML comments
-        html_content = re.sub(r'<!--.*?-->', '', html_content, flags=re.DOTALL)
+        html_content = re.sub(r"<!--.*?-->", "", html_content, flags=re.DOTALL)
 
         # Handle special characters and entities
-        html_content = html_content.replace('&oslash;', 'ø')
-        html_content = html_content.replace('&aelig;', 'æ')
-        html_content = html_content.replace('&aring;', 'å')
-        html_content = html_content.replace('&Oslash;', 'Ø')
-        html_content = html_content.replace('&Aelig;', 'Æ')
-        html_content = html_content.replace('&Aring;', 'Å')
+        html_content = html_content.replace("&oslash;", "ø")
+        html_content = html_content.replace("&aelig;", "æ")
+        html_content = html_content.replace("&aring;", "å")
+        html_content = html_content.replace("&Oslash;", "Ø")
+        html_content = html_content.replace("&Aelig;", "Æ")
+        html_content = html_content.replace("&Aring;", "Å")
 
         return html_content
 
@@ -75,7 +81,7 @@ class Client:
                 strip=["script", "style"],
                 heading_style="ATX",
                 bullets="-",
-                convert_links=True
+                convert_links=True,
             )
 
             return markdown_content
@@ -90,10 +96,12 @@ class Client:
         """Get a single document by ID."""
         access_token = self.access_token
         headers = {
-            'Authorization': f'Bearer {access_token}',
-            'Content-Type': 'application/json'
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
         }
-        response = requests.get(f'{self.base_url}/api/documents/{document_id}', headers=headers)
+        response = requests.get(
+            f"{self.base_url}/api/documents/{document_id}", headers=headers
+        )
 
         # Check if the response is successful
         response.raise_for_status()
@@ -106,36 +114,42 @@ class Client:
             created = None
             updated = None
 
-            if 'created' in response and response['created']:
+            if "created" in response and response["created"]:
                 try:
-                    created = datetime.fromisoformat(json['created'].replace('Z', '+00:00'))
+                    created = datetime.fromisoformat(
+                        json["created"].replace("Z", "+00:00")
+                    )
                 except (ValueError, AttributeError):
                     pass
 
-            if 'updated' in response and response['updated']:
+            if "updated" in response and response["updated"]:
                 try:
-                    updated = datetime.fromisoformat(json['updated'].replace('Z', '+00:00'))
+                    updated = datetime.fromisoformat(
+                        json["updated"].replace("Z", "+00:00")
+                    )
                 except (ValueError, AttributeError):
                     pass
 
             # Convert deleted field to boolean (None -> False, anything else -> True)
-            deleted = False if json.get('deleted') is None else True
+            deleted = False if json.get("deleted") is None else True
 
             # Split keywords into array by comma
-            keywords = json.get('fields', {}).get('keywords', '')
-            keywords_array = [keyword.strip() for keyword in keywords.split(',')] if keywords else []
+            keywords = json.get("fields", {}).get("keywords", "")
+            keywords_array = (
+                [keyword.strip() for keyword in keywords.split(",")] if keywords else []
+            )
 
             # Extract the requested fields
             return {
-                'id': json.get('id'),
-                'childCount': json.get('childCount'),
-                'created': created,
-                'updated': updated,
-                'revisioning': json.get('revisioning'),
-                'deleted': deleted,
-                'title': json.get('fields', {}).get('title'),
-                'description': json.get('fields', {}).get('description'),
-                'keywords': keywords_array
+                "id": json.get("id"),
+                "childCount": json.get("childCount"),
+                "created": created,
+                "updated": updated,
+                "revisioning": json.get("revisioning"),
+                "deleted": deleted,
+                "title": json.get("fields", {}).get("title"),
+                "description": json.get("fields", {}).get("description"),
+                "keywords": keywords_array,
             }
         return None
 
@@ -143,10 +157,12 @@ class Client:
         """Get all children of a document by ID."""
         access_token = self.access_token
         headers = {
-            'Authorization': f'Bearer {access_token}',
-            'Content-Type': 'application/json'
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
         }
-        response = requests.get(f'{self.base_url}/api/documents/{document_id}/children', headers=headers)
+        response = requests.get(
+            f"{self.base_url}/api/documents/{document_id}/children", headers=headers
+        )
 
         # Check if the response is successful
         response.raise_for_status()
@@ -159,32 +175,42 @@ class Client:
             created = None
             updated = None
 
-            if 'created' in item and item['created']:
+            if "created" in item and item["created"]:
                 try:
-                    created = datetime.fromisoformat(item['created'].replace('Z', '+00:00'))
+                    created = datetime.fromisoformat(
+                        item["created"].replace("Z", "+00:00")
+                    )
                 except (ValueError, AttributeError):
                     pass
 
-            if 'updated' in item and item['updated']:
+            if "updated" in item and item["updated"]:
                 try:
-                    updated = datetime.fromisoformat(item['updated'].replace('Z', '+00:00'))
+                    updated = datetime.fromisoformat(
+                        item["updated"].replace("Z", "+00:00")
+                    )
                 except (ValueError, AttributeError):
                     pass
 
             # Split keywords into array by comma
-            keywords = item.get('fields', {}).get('keywords', '')
-            keywords_array = [keyword.strip() for keyword in keywords.split(',')] if keywords else []
+            keywords = item.get("fields", {}).get("keywords", "")
+            keywords_array = (
+                [keyword.strip() for keyword in keywords.split(",")] if keywords else []
+            )
 
-            body = item.get('fields', {}).get('body', '') if item.get('fields', {}).get('body') else None
+            body = (
+                item.get("fields", {}).get("body", "")
+                if item.get("fields", {}).get("body")
+                else None
+            )
             body = self._html_clean_up(body)
             body = self._html_to_markdown(body)
 
             yield {
-                'id': item.get('id'),
-                'created': created,
-                'updated': updated,
-                'title': item.get('fields', {}).get('title'),
-                'description': item.get('fields', {}).get('description'),
-                'body': body,
-                'keywords': keywords_array
+                "id": item.get("id"),
+                "created": created,
+                "updated": updated,
+                "title": item.get("fields", {}).get("title"),
+                "description": item.get("fields", {}).get("description"),
+                "body": body,
+                "keywords": keywords_array,
             }

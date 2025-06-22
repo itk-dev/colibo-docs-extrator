@@ -1,3 +1,5 @@
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 # Colibo document extractor
 
 A synchronization tool that extracts documents from Colibo and uploads them to Open-WebUI knowledge base.

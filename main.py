@@ -14,7 +14,7 @@ from db.sync_manager import SyncManager
 
 load_dotenv()
 # Colibo settings
-COLIBO_BASE_URL=os.environ.get("COLIBO_BASE_URL")
+COLIBO_BASE_URL = os.environ.get("COLIBO_BASE_URL")
 COLIBO_CLIENT_ID = os.environ.get("COLIBO_CLIENT_ID")
 COLIBO_CLIENT_SECRET = os.environ.get("COLIBO_CLIENT_SECRET")
 COLIBO_SCOPE = os.environ.get("COLIBO_SCOPE")
@@ -23,7 +23,7 @@ WEBUI_BASE_URL = os.environ.get("WEBUI_BASE_URL")
 WEBUI_TOKEN = os.environ.get("WEBUI_TOKEN")
 WEBUI_KNOWLEDGE_ID = os.environ.get("WEBUI_KNOWLEDGE_ID")
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("colibo-sync")
 logger.setLevel(logging.DEBUG)
 
@@ -43,6 +43,7 @@ def silent_progressbar(iterable, **kwargs):
     """A context manager that yields the iterable without displaying progress."""
     yield iterable
 
+
 ###
 # @todo:
 #   - files attached in calibo docs
@@ -51,13 +52,16 @@ def silent_progressbar(iterable, **kwargs):
 #   - Use docs delete field
 ###
 
+
 @cli.command()
-@click.option('--root-doc-id', help='Id of the root document.')
-@click.option('--quiet', is_flag=True, help='Do not display progress.')
+@click.option("--root-doc-id", help="Id of the root document.")
+@click.option("--quiet", is_flag=True, help="Do not display progress.")
 def sync(root_doc_id, quiet: bool = False):
     """Synchronize documents from Colibo to Open-Webui."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
-    colibo = ColiboClient(COLIBO_BASE_URL, COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE)
+    colibo = ColiboClient(
+        COLIBO_BASE_URL, COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE
+    )
 
     # Custom echo function that respects the quiet flag
     def echo(*args, **kwargs):
@@ -67,21 +71,21 @@ def sync(root_doc_id, quiet: bool = False):
     doc = colibo.get_document(root_doc_id)
     echo(f"Syncing root document {root_doc_id} (Colibo)")
     res = webui.upload_from_string(
-        content='# ' + doc['title'] + "\n\n" + doc['description'],
-        filename="colibo-" + str(doc['id']) + '.md',
-        content_type='text/markdown',
-        metadata={}
+        content="# " + doc["title"] + "\n\n" + doc["description"],
+        filename="colibo-" + str(doc["id"]) + ".md",
+        content_type="text/markdown",
+        metadata={},
     )
-    webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, res['id'])
+    webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, res["id"])
 
     # Record sync in the database
     sync_manager.record_sync(
         colibo_doc_id=root_doc_id,
-        webui_doc_id=res['id'],
+        webui_doc_id=res["id"],
     )
 
-    docs = colibo.get_children(doc['id'])
-    total_docs = doc['childCount'] + 1 if doc['childCount'] else 1
+    docs = colibo.get_children(doc["id"])
+    total_docs = doc["childCount"] + 1 if doc["childCount"] else 1
 
     # Track statistics
     processed_count = 1  # Start with 1 for the root document
@@ -93,27 +97,33 @@ def sync(root_doc_id, quiet: bool = False):
     progress_context = silent_progressbar if quiet else click.progressbar
 
     # Process each child document with a progress bar
-    with progress_context(docs, label="Syncing child documents", length=total_docs) as bar:
+    with progress_context(
+        docs, label="Syncing child documents", length=total_docs
+    ) as bar:
         for item in bar:
             # Check if all content fields are None
-            if item['title'] is None and item['description'] is None and item['body'] is None:
+            if (
+                item["title"] is None
+                and item["description"] is None
+                and item["body"] is None
+            ):
                 skipped_count += 1
                 continue
 
             # Prepare content with available data
             content_parts = []
-            if item['title']:
-                content_parts.append('# ' + item['title'])
-            if item['description']:
-                content_parts.append(item['description'])
-            if item['body']:
-                content_parts.append(item['body'])
+            if item["title"]:
+                content_parts.append("# " + item["title"])
+            if item["description"]:
+                content_parts.append(item["description"])
+            if item["body"]:
+                content_parts.append(item["body"])
 
             # Join the content parts with double newlines
-            content = '\n\n'.join(content_parts)
+            content = "\n\n".join(content_parts)
 
             # Check if the document already exists
-            existing = sync_manager.get_document(item['id'])
+            existing = sync_manager.get_document(item["id"])
 
             if existing:
                 # Update existing document
@@ -123,18 +133,18 @@ def sync(root_doc_id, quiet: bool = False):
             else:
                 res = webui.upload_from_string(
                     content=content,
-                    filename="colibo-" + str(item['id']) + '.md',
-                    content_type='text/markdown',
-                    metadata={}
+                    filename="colibo-" + str(item["id"]) + ".md",
+                    content_type="text/markdown",
+                    metadata={},
                 )
-                webui_doc_id = res['id']
+                webui_doc_id = res["id"]
                 red = webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, webui_doc_id)
                 ## TODO check that the doc is add to the knowledge successfully
                 new_count += 1
 
                 # Record sync in the database
                 sync_manager.record_sync(
-                    colibo_doc_id=item['id'],
+                    colibo_doc_id=item["id"],
                     webui_doc_id=webui_doc_id,
                 )
 
@@ -153,7 +163,9 @@ def sync(root_doc_id, quiet: bool = False):
 
 
 @cli.command()
-@click.option('--colibo-id', help='Colibo document ID to delete', required=True, type=int)
+@click.option(
+    "--colibo-id", help="Colibo document ID to delete", required=True, type=int
+)
 def delete_doc(colibo_id):
     """Delete a document from WebUI and mark it as deleted in the database."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
@@ -161,7 +173,13 @@ def delete_doc(colibo_id):
     # Get a document from the database
     doc = sync_manager.get_document(colibo_id)
     if not doc:
-        click.echo(click.style(f"Document with Colibo ID {colibo_id} not found in database", fg="red", bold=True))
+        click.echo(
+            click.style(
+                f"Document with Colibo ID {colibo_id} not found in database",
+                fg="red",
+                bold=True,
+            )
+        )
         return
 
     # Delete from WebUI
@@ -171,7 +189,9 @@ def delete_doc(colibo_id):
         sync_manager.delete_document(colibo_id)
 
         click.echo("")
-        click.echo(click.style("✓ Document deleted successfully!", fg="green", bold=True))
+        click.echo(
+            click.style("✓ Document deleted successfully!", fg="green", bold=True)
+        )
         click.echo(f"Colibo ID: {colibo_id}")
         click.echo(f"WebUI ID: {doc.webui_doc_id}")
     except Exception as e:
@@ -181,7 +201,7 @@ def delete_doc(colibo_id):
 
 
 @cli.command()
-@click.option('--confirm', is_flag=True, help='Confirm deletion without prompting')
+@click.option("--confirm", is_flag=True, help="Confirm deletion without prompting")
 def delete_all_docs(confirm):
     """Delete all documents from WebUI and remove them from the database."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
@@ -194,8 +214,12 @@ def delete_all_docs(confirm):
 
     # Confirm deletion
     if not confirm:
-        click.echo(f"This will delete {len(docs)} documents from WebUI and the database.")
-        click.echo(click.style("WARNING: This action cannot be undone!", fg="red", bold=True))
+        click.echo(
+            f"This will delete {len(docs)} documents from WebUI and the database."
+        )
+        click.echo(
+            click.style("WARNING: This action cannot be undone!", fg="red", bold=True)
+        )
         if not click.confirm("Do you want to continue?"):
             click.echo("Operation cancelled.")
             return
@@ -224,10 +248,20 @@ def delete_all_docs(confirm):
     # Print summary
     click.echo("")
     if success_count > 0:
-        click.echo(click.style(f"✓ Successfully deleted {success_count} documents", fg="green", bold=True))
+        click.echo(
+            click.style(
+                f"✓ Successfully deleted {success_count} documents",
+                fg="green",
+                bold=True,
+            )
+        )
 
     if error_count > 0:
-        click.echo(click.style(f"✗ Failed to delete {error_count} documents", fg="red", bold=True))
+        click.echo(
+            click.style(
+                f"✗ Failed to delete {error_count} documents", fg="red", bold=True
+            )
+        )
 
         # Show errors if there are any
         if errors:
@@ -253,17 +287,21 @@ def list_docs():
         # Format the datetime to be more readable
         last_synced = doc.last_synced.strftime("%Y-%m-%d %H:%M:%S")
 
-        rows.append([
-            str(doc.colibo_doc_id),
-            doc.webui_doc_id,
-            last_synced,
-        ])
+        rows.append(
+            [
+                str(doc.colibo_doc_id),
+                doc.webui_doc_id,
+                last_synced,
+            ]
+        )
 
     # Print the table
     click.echo(click.style("\nSynced Documents:", fg="green", bold=True))
 
     # Calculate column widths based on content
-    col_widths = [max(len(str(row[i])) for row in [headers] + rows) for i in range(len(headers))]
+    col_widths = [
+        max(len(str(row[i])) for row in [headers] + rows) for i in range(len(headers))
+    ]
 
     # Print header
     header_row = " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
@@ -272,14 +310,21 @@ def list_docs():
 
     # Print rows
     for row in rows:
-        formatted_row = " | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row))
+        formatted_row = " | ".join(
+            str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)
+        )
         click.echo(formatted_row)
 
     click.echo("-" * len(header_row))
     click.echo(f"\nTotal: {len(rows)} documents")
 
+
 @cli.command()
-@click.option('--knowledge-id', help='ID of the knowledge resource to retrieve', default=WEBUI_KNOWLEDGE_ID)
+@click.option(
+    "--knowledge-id",
+    help="ID of the knowledge resource to retrieve",
+    default=WEBUI_KNOWLEDGE_ID,
+)
 def get_knowledge(knowledge_id):
     """Retrieve information about a specific knowledge resource."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
@@ -291,8 +336,11 @@ def get_knowledge(knowledge_id):
         click.echo(f"Name: {knowledge['name']}")
         click.echo(f"Description: {knowledge['description']}")
     except Exception as e:
-        click.echo(click.style("✗ Failed to retrieve knowledge resource!", fg="red", bold=True))
+        click.echo(
+            click.style("✗ Failed to retrieve knowledge resource!", fg="red", bold=True)
+        )
         click.echo(f"Error: {str(e)}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     cli()

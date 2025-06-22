@@ -22,22 +22,20 @@ class Client:
             Response object from the API request
         """
 
-        headers = {
-            'Authorization': f'Bearer {self.token}'
-        }
+        headers = {"Authorization": f"Bearer {self.token}"}
 
         # Convert string to bytes if needed
         if isinstance(content, str):
-            content = content.encode('utf-8')
+            content = content.encode("utf-8")
 
-        files = {
-            'file': (filename, content, content_type)
-        }
+        files = {"file": (filename, content, content_type)}
 
         # For multipart/form-data, we need to send metadata as a form field
-        form_data = {'metadata': str(metadata).replace("'", '"')}  # Convert Python dict to JSON string
+        form_data = {
+            "metadata": str(metadata).replace("'", '"')
+        }  # Convert Python dict to JSON string
 
-        url = f'{self.base_url}/api/v1/files/?process=true&internal=false'
+        url = f"{self.base_url}/api/v1/files/?process=true&internal=false"
         response = requests.post(url, headers=headers, data=form_data, files=files)
 
         return response.json()
@@ -54,16 +52,14 @@ class Client:
             Response object from the API request
         """
         headers = {
-            'Authorization': f'Bearer {self.token}',
-            'Content-Type': 'application/json',
-            'accept': 'application/json'
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json",
+            "accept": "application/json",
         }
 
-        data = {
-            'content': content
-        }
+        data = {"content": content}
 
-        url = f'{self.base_url}/api/v1/files/{file_id}/data/content/update'
+        url = f"{self.base_url}/api/v1/files/{file_id}/data/content/update"
         response = requests.post(url, headers=headers, json=data)
         return response
 
@@ -78,11 +74,11 @@ class Client:
             Response object from the API request
         """
         headers = {
-            'Authorization': f'Bearer {self.token}',
-            'accept': 'application/json'
+            "Authorization": f"Bearer {self.token}",
+            "accept": "application/json",
         }
 
-        url = f'{self.base_url}/api/v1/files/{file_id}'
+        url = f"{self.base_url}/api/v1/files/{file_id}"
         response = requests.delete(url, headers=headers)
         return response
 
@@ -98,16 +94,14 @@ class Client:
             Response object from the API request
         """
         headers = {
-            'Authorization': f'Bearer {self.token}',
-            'Content-Type': 'application/json',
-            'accept': 'application/json'
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json",
+            "accept": "application/json",
         }
 
-        data = {
-            'file_id': file_id
-        }
+        data = {"file_id": file_id}
 
-        url = f'{self.base_url}/api/v1/knowledge/{knowledge_id}/file/add'
+        url = f"{self.base_url}/api/v1/knowledge/{knowledge_id}/file/add"
         response = requests.post(url, headers=headers, json=data)
         return response
 
@@ -123,16 +117,14 @@ class Client:
             Response object from the API request
         """
         headers = {
-            'Authorization': f'Bearer {self.token}',
-            'Content-Type': 'application/json',
-            'accept': 'application/json'
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json",
+            "accept": "application/json",
         }
 
-        data = {
-            'file_id': file_id
-        }
+        data = {"file_id": file_id}
 
-        url = f'{self.base_url}/api/v1/knowledge/{knowledge_id}/file/remove'
+        url = f"{self.base_url}/api/v1/knowledge/{knowledge_id}/file/remove"
         response = requests.post(url, headers=headers, json=data)
         return response
 
@@ -147,15 +139,17 @@ class Client:
             Response object from the API request
         """
         headers = {
-            'Authorization': f'Bearer {self.token}',
-            'accept': 'application/json'
+            "Authorization": f"Bearer {self.token}",
+            "accept": "application/json",
         }
 
-        url = f'{self.base_url}/api/v1/knowledge/{knowledge_id}'
+        url = f"{self.base_url}/api/v1/knowledge/{knowledge_id}"
         response = requests.get(url, headers=headers)
 
         # Check if the response status code is 200
         if response.status_code != 200:
-            raise Exception(f"API request failed with status code {response.status_code}: {response.text}")
+            raise Exception(
+                f"API request failed with status code {response.status_code}: {response.text}"
+            )
 
         return response.json()
