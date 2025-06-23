@@ -39,19 +39,19 @@ class Client:
 
     def _extract_id_from_url(self, url):
         """
-            Extract the numeric ID from a URL that belongs to the base domain.
+        Extract the numeric ID from a URL that belongs to the base domain.
 
-            This method parses a URL and extracts the numeric ID that typically appears
-            as the last segment of the path (e.g., '81181' from
-            'https://intranet.aarhuskommune.dk/documents/81181').
+        This method parses a URL and extracts the numeric ID that typically appears
+        as the last segment of the path (e.g., '81181' from
+        'https://intranet.aarhuskommune.dk/documents/81181').
 
-            Args:
-                url (str): The full URL from which to extract the ID.
+        Args:
+            url (str): The full URL from which to extract the ID.
 
-            Returns:
-                str or None: The extracted numeric ID as a string if found and valid,
-                            None if the URL doesn't belong to the base domain or
-                            doesn't contain a valid numeric ID as the last path segment.
+        Returns:
+            str or None: The extracted numeric ID as a string if found and valid,
+                        None if the URL doesn't belong to the base domain or
+                        doesn't contain a valid numeric ID as the last path segment.
         """
         # Parse the full URL and the base URL
         parsed_url = urllib.parse.urlparse(url)
@@ -62,7 +62,7 @@ class Client:
             return None
 
         # Split the path into segments
-        path_segments = parsed_url.path.strip('/').split('/')
+        path_segments = parsed_url.path.strip("/").split("/")
 
         # The ID should be the last segment in the path
         if path_segments and path_segments[-1].isdigit():
@@ -196,7 +196,9 @@ class Client:
             }
         return None
 
-    def get_children(self, document_id, max_depth=10, current_depth=0, visited_ids=None):
+    def get_children(
+        self, document_id, max_depth=10, current_depth=0, visited_ids=None
+    ):
         """
         Get all children of a document by ID recursively up to a specified maximum depth.
 
@@ -250,29 +252,35 @@ class Client:
             doctype = item.get("type", {}).get("name").lower()
             match doctype:
                 case "link":
-                    url =  item.get("fields", {}).get("url")
+                    url = item.get("fields", {}).get("url")
                     if url:
-                       linked_doc_id = self._extract_id_from_url(url)
-                       if linked_doc_id in visited_ids:
-                           # Skip it if it has already been visited
-                           continue
+                        linked_doc_id = self._extract_id_from_url(url)
+                        if linked_doc_id in visited_ids:
+                            # Skip it if it has already been visited
+                            continue
 
-                       if linked_doc_id:
-                           linked_doc = self.get_document(linked_doc_id)
-                           print(f"Count: {linked_doc_id} - {linked_doc['childCount']}")
-                           yield linked_doc
+                        if linked_doc_id:
+                            linked_doc = self.get_document(linked_doc_id)
+                            yield linked_doc
 
-                           if linked_doc['childCount']:
-                               yield from self.get_children(linked_doc_id, max_depth, current_depth + 1, visited_ids)
-                       else:
-                           # Extern link
-                           print(f"document_id: {document_id} ({linked_doc_id} - {url})")
-                           #yield from self.get_children(document_id, max_depth, current_depth + 1, visited_ids)
+                            if linked_doc["childCount"]:
+                                yield from self.get_children(
+                                    linked_doc_id,
+                                    max_depth,
+                                    current_depth + 1,
+                                    visited_ids,
+                                )
+                        else:
+                            # Extern link
+                            print(f"External document_id: {document_id} ({url})")
+                            # yield from self.get_children(document_id, max_depth, current_depth + 1, visited_ids)
 
                     # Stop processing this doc, we do not yield the link page.
                     continue
                 case "folder":
-                    yield from self.get_children(item.get("id"), max_depth, current_depth + 1, visited_ids)
+                    yield from self.get_children(
+                        item.get("id"), max_depth, current_depth + 1, visited_ids
+                    )
 
             if "created" in item and item["created"]:
                 try:

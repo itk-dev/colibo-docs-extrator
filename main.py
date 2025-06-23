@@ -44,15 +44,6 @@ def silent_progressbar(iterable, **kwargs):
     yield iterable
 
 
-###
-# @todo:
-#   - files attached in calibo docs
-#   - maybe move knowledge id to CLI option
-#   - validation of knowledge id
-#   - Use docs delete field
-###
-
-
 @cli.command()
 @click.option("--root-doc-id", help="Id of the root document.")
 @click.option("--quiet", is_flag=True, help="Do not display progress.")
@@ -80,8 +71,8 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
         filename="colibo-" + str(doc["id"]) + ".md",
         content_type="text/markdown",
         metadata={
-            "doctype": doc['doctype'],
-            "keywords": doc['keywords'],
+            "doctype": doc["doctype"],
+            "keywords": doc["keywords"],
         },
     )
     webui.add_file_to_knowledge(knowledge_id, res["id"])
@@ -93,8 +84,6 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
         knowledge_id=knowledge_id,
     )
 
-    docs = colibo.get_children(doc["id"], visited_ids={ root_doc_id })
-
     # Track statistics
     processed_count = 1  # Start with 1 for the root document
     skipped_count = 0
@@ -105,6 +94,9 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
 
     # Choose the appropriate progress bar based on the quiet flag
     progress_context = silent_progressbar if quiet else click.progressbar
+
+    # Get children
+    docs = colibo.get_children(doc["id"], visited_ids={root_doc_id})
 
     # Process each child document with a progress bar
     with progress_context(docs, label="Syncing child documents") as bar:
@@ -136,16 +128,21 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
             if existing:
                 # Update existing document
                 res = webui.update_file_content(existing.webui_doc_id, content)
-                ## TODO check that the doc restructured successfully
+                ## TODO check that the doc updated successfully
                 updated_count += 1
             else:
+                if item["doctype"] == "file":
+                    # Ignore files for now.
+                    # TODO: Figure out what to do with files.
+                    continue
+
                 res = webui.upload_from_string(
                     content=content,
                     filename="colibo-" + str(item["id"]) + ".md",
                     content_type="text/markdown",
                     metadata={
-                        "doctype": item['doctype'],
-                        "keywords": item['keywords'],
+                        "doctype": item["doctype"],
+                        "keywords": item["keywords"],
                     },
                 )
                 webui_doc_id = res["id"]
@@ -371,6 +368,7 @@ def get_knowledge(knowledge_id):
         )
         click.echo(f"Error: {str(e)}")
 
+
 @cli.command()
 @click.option("--root-doc-id", help="Id of the root document.")
 def colibo_sync_debug(root_doc_id):
@@ -390,11 +388,11 @@ def colibo_sync_debug(root_doc_id):
     click.echo(f"\n")
 
     counter = 0
-    docs = colibo.get_children(doc["id"], visited_ids={ root_doc_id })
+    docs = colibo.get_children(doc["id"], visited_ids={root_doc_id})
     click.echo(click.style("Child docs:", fg="green", bold=True))
     for item in docs:
         counter += 1
-        doctype = item['doctype']
+        doctype = item["doctype"]
         doctype_color = "white"
         if doctype == "page":
             doctype_color = "green"
@@ -413,6 +411,7 @@ def colibo_sync_debug(root_doc_id):
         click.echo(f"Keywords: {doc['keywords']}")
         click.echo(f"\n")
     click.echo(f"Total child docs: {click.style(counter, fg='blue')}")
+
 
 @cli.command()
 @click.argument("doc_id", type=int)

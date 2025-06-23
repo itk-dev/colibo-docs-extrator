@@ -118,10 +118,10 @@ docker run --rm --env-file .env -v ./sync.db:/app/sync.db colibo-document-extrat
 
 - Add support for files attached to Colibo documents
 - Implement validation for knowledge ID
-- Use docs delete field
 - Better error handling
 - Use colibo updated timestamp
 - Token cache (expires_in)
+- Handle external links in colibo
 
 ## License
 
