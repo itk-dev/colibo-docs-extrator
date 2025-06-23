@@ -143,7 +143,10 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
                     content=content,
                     filename="colibo-" + str(item["id"]) + ".md",
                     content_type="text/markdown",
-                    metadata={},
+                    metadata={
+                        "doctype": item['doctype'],
+                        "keywords": item['keywords'],
+                    },
                 )
                 webui_doc_id = res["id"]
                 red = webui.add_file_to_knowledge(knowledge_id, webui_doc_id)
