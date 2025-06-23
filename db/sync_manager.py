@@ -10,7 +10,7 @@ class SyncManager:
         """Initialize with an optional session."""
         self.session = session or get_session()
 
-    def record_sync(self, colibo_doc_id, webui_doc_id):
+    def record_sync(self, colibo_doc_id, webui_doc_id, knowledge_id):
         """Record a new sync or update an existing record."""
         doc = (
             self.session.query(SyncedDocument)
@@ -27,17 +27,18 @@ class SyncManager:
             doc = SyncedDocument(
                 colibo_doc_id=colibo_doc_id,
                 webui_doc_id=webui_doc_id,
+                knowledge_id=knowledge_id,
             )
             self.session.add(doc)
 
         self.session.commit()
         return doc
 
-    def delete_document(self, colibo_doc_id):
+    def delete_document(self, colibo_doc_id, knowledge_id):
         """Permanently delete a document from the database."""
         doc = (
             self.session.query(SyncedDocument)
-            .filter_by(colibo_doc_id=colibo_doc_id)
+            .filter_by(colibo_doc_id=colibo_doc_id, knowledge_id=knowledge_id)
             .first()
         )
         if doc:
@@ -45,11 +46,11 @@ class SyncManager:
             self.session.commit()
         return doc
 
-    def get_document(self, colibo_doc_id):
+    def get_document(self, colibo_doc_id, knowledge_id):
         """Get a synced document by Colibo ID."""
         return (
             self.session.query(SyncedDocument)
-            .filter_by(colibo_doc_id=colibo_doc_id)
+            .filter_by(colibo_doc_id=colibo_doc_id, knowledge_id=knowledge_id)
             .first()
         )
 

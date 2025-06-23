@@ -56,7 +56,12 @@ def silent_progressbar(iterable, **kwargs):
 @cli.command()
 @click.option("--root-doc-id", help="Id of the root document.")
 @click.option("--quiet", is_flag=True, help="Do not display progress.")
-def sync(root_doc_id, quiet: bool = False):
+@click.option(
+    "--knowledge-id",
+    help="ID of the knowledge resource to retrieve",
+    default=WEBUI_KNOWLEDGE_ID,
+)
+def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     """Synchronize documents from Colibo to Open-Webui."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
     colibo = ColiboClient(
@@ -76,12 +81,13 @@ def sync(root_doc_id, quiet: bool = False):
         content_type="text/markdown",
         metadata={},
     )
-    webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, res["id"])
+    webui.add_file_to_knowledge(knowledge_id, res["id"])
 
     # Record sync in the database
     sync_manager.record_sync(
         colibo_doc_id=root_doc_id,
         webui_doc_id=res["id"],
+        knowledge_id=knowledge_id,
     )
 
     docs = colibo.get_children(doc["id"])
@@ -123,7 +129,10 @@ def sync(root_doc_id, quiet: bool = False):
             content = "\n\n".join(content_parts)
 
             # Check if the document already exists
-            existing = sync_manager.get_document(item["id"])
+            existing = sync_manager.get_document(item["id"], knowledge_id)
+            echo(
+                f"Processing document {item['id']} (Colibo) {'(already synced)' if existing else ''}"
+            )
 
             if existing:
                 # Update existing document
@@ -138,7 +147,7 @@ def sync(root_doc_id, quiet: bool = False):
                     metadata={},
                 )
                 webui_doc_id = res["id"]
-                red = webui.add_file_to_knowledge(WEBUI_KNOWLEDGE_ID, webui_doc_id)
+                red = webui.add_file_to_knowledge(knowledge_id, webui_doc_id)
                 ## TODO check that the doc is add to the knowledge successfully
                 new_count += 1
 
@@ -146,6 +155,7 @@ def sync(root_doc_id, quiet: bool = False):
                 sync_manager.record_sync(
                     colibo_doc_id=item["id"],
                     webui_doc_id=webui_doc_id,
+                    knowledge_id=knowledge_id,
                 )
 
             processed_count += 1
@@ -166,12 +176,17 @@ def sync(root_doc_id, quiet: bool = False):
 @click.option(
     "--colibo-id", help="Colibo document ID to delete", required=True, type=int
 )
-def delete_doc(colibo_id):
+@click.option(
+    "--knowledge-id",
+    help="ID of the knowledge resource to retrieve",
+    default=WEBUI_KNOWLEDGE_ID,
+)
+def delete_doc(colibo_id, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     """Delete a document from WebUI and mark it as deleted in the database."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
 
     # Get a document from the database
-    doc = sync_manager.get_document(colibo_id)
+    doc = sync_manager.get_document(colibo_id, knowledge_id)
     if not doc:
         click.echo(
             click.style(
@@ -184,9 +199,9 @@ def delete_doc(colibo_id):
 
     # Delete from WebUI
     try:
-        webui.remove_file_from_knowledge(WEBUI_KNOWLEDGE_ID, doc.webui_doc_id)
+        webui.remove_file_from_knowledge(knowledge_id, doc.webui_doc_id)
         webui.delete_file(doc.webui_doc_id)
-        sync_manager.delete_document(colibo_id)
+        sync_manager.delete_document(colibo_id, knowledge_id)
 
         click.echo("")
         click.echo(
@@ -202,7 +217,12 @@ def delete_doc(colibo_id):
 
 @cli.command()
 @click.option("--confirm", is_flag=True, help="Confirm deletion without prompting")
-def delete_all_docs(confirm):
+@click.option(
+    "--knowledge-id",
+    help="ID of the knowledge resource to retrieve",
+    default=WEBUI_KNOWLEDGE_ID,
+)
+def delete_all_docs(confirm, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     """Delete all documents from WebUI and remove them from the database."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
 
@@ -234,11 +254,11 @@ def delete_all_docs(confirm):
         for doc in bar:
             try:
                 # Delete from WebUI
-                webui.remove_file_from_knowledge(WEBUI_KNOWLEDGE_ID, doc.webui_doc_id)
+                webui.remove_file_from_knowledge(knowledge_id, doc.webui_doc_id)
                 webui.delete_file(doc.webui_doc_id)
 
                 # Delete from database
-                sync_manager.delete_document(doc.colibo_doc_id)
+                sync_manager.delete_document(doc.colibo_doc_id, knowledge_id)
 
                 success_count += 1
             except Exception as e:

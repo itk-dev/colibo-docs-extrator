@@ -15,6 +15,7 @@ class SyncedDocument(Base):
     id = Column(Integer, primary_key=True)
     colibo_doc_id = Column(Integer, nullable=False, unique=True, index=True)
     webui_doc_id = Column(String, nullable=False)
+    knowledge_id = Column(String, nullable=False)
     last_synced = Column(DateTime, default=datetime.utcnow)
 
     def __repr__(self):

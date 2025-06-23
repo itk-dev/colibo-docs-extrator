@@ -53,6 +53,7 @@ Options:
 
 - `--root-doc-id`: ID of the root document in Colibo
 - `--quiet`: Suppress progress display
+- `--knowledge-id`: Knowledge id from Open-Webui
 
 ### Delete a Document
 
@@ -62,6 +63,10 @@ Delete a specific document from Open-WebUI:
 python main.py delete-doc --colibo-id ID
 ```
 
+Options:
+
+- `--knowledge-id`: Knowledge id from Open-Webui
+
 ### Delete All Documents
 
 Remove all synchronized documents from Open-WebUI:
@@ -69,8 +74,10 @@ Remove all synchronized documents from Open-WebUI:
 ``` bash
 python main.py delete-all-docs
 ```
+Options:
 
-Add `--confirm` to bypass the confirmation prompt.
+- `--knowledge-id`: Knowledge id from Open-Webui
+- `--confirm` to bypass the confirmation prompt.
 
 ### List Documents
 
@@ -110,7 +117,6 @@ docker run --rm --env-file .env -v ./sync.db:/app/sync.db colibo-document-extrat
 ## Todo
 
 - Add support for files attached to Colibo documents
-- Make knowledge ID a CLI option
 - Implement validation for knowledge ID
 - Use docs delete field
 - Better error handling
