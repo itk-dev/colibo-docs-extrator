@@ -91,21 +91,20 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
     )
 
     docs = colibo.get_children(doc["id"])
-    total_docs = doc["childCount"] + 1 if doc["childCount"] else 1
 
     # Track statistics
     processed_count = 1  # Start with 1 for the root document
     skipped_count = 0
     updated_count = 0
     new_count = 1
+    page_count = 0
+    link_count = 0
 
     # Choose the appropriate progress bar based on the quiet flag
     progress_context = silent_progressbar if quiet else click.progressbar
 
     # Process each child document with a progress bar
-    with progress_context(
-        docs, label="Syncing child documents", length=total_docs
-    ) as bar:
+    with progress_context(docs, label="Syncing child documents") as bar:
         for item in bar:
             # Check if all content fields are None
             if (
@@ -155,6 +154,12 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
                     knowledge_id=knowledge_id,
                 )
 
+            doctype = item.get("doctype", {})
+            if doctype == "page":
+                page_count += 1
+            elif doctype == "link":
+                link_count += 1
+
             processed_count += 1
 
     # Add a summary at the end
@@ -164,6 +169,8 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
     echo(f"New documents created: {new_count}")
     echo(f"Existing documents updated: {updated_count}")
     echo(f"Documents skipped: {skipped_count}")
+    echo(f"Page documents: {page_count}")
+    echo(f"Link documents: {link_count}")
     echo(f"Root document: {root_doc_id} (Colibo)")
     echo("")
     echo(click.style("✓ Sync completed successfully!", fg="green", bold=True))
@@ -357,6 +364,49 @@ def get_knowledge(knowledge_id):
             click.style("✗ Failed to retrieve knowledge resource!", fg="red", bold=True)
         )
         click.echo(f"Error: {str(e)}")
+
+@cli.command()
+@click.option("--root-doc-id", help="Id of the root document.")
+def debug(root_doc_id):
+    colibo = ColiboClient(
+        COLIBO_BASE_URL, COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE
+    )
+    doc = colibo.get_document(root_doc_id)
+    click.echo(click.style("Root document information:", fg="green", bold=True))
+    click.echo(f"Fetched root document {root_doc_id}")
+    click.echo(f"Title: {doc['title']}")
+    click.echo(f"Description: {doc['description']}")
+    click.echo(f"Body: {doc['body']}")
+    click.echo(f"Child count: {doc['childCount']}")
+    click.echo(f"Created at: {doc['created']}")
+    click.echo(f"Updated at: {doc['updated']}")
+    click.echo(f"Keywords: {doc['keywords']}")
+    click.echo(f"\n")
+
+    counter = 0
+    docs = colibo.get_children(doc["id"], visited_ids={ root_doc_id })
+    click.echo(click.style("Child docs:", fg="green", bold=True))
+    for item in docs:
+        counter += 1
+        doctype = item['doctype']
+        doctype_color = "white"
+        if doctype == "page":
+            doctype_color = "green"
+        elif doctype == "link":
+            doctype_color = "red"
+        elif doctype == "folder":
+            doctype_color = "yellow"
+        elif doctype == "file":
+            doctype_color = "blue"
+
+        click.echo(f"Fetched child document {item['id']}")
+        click.echo(f"Type: {click.style(doctype, fg=doctype_color)}")
+        click.echo(f"Title: {item['title']}")
+        click.echo(f"Created at: {item['created']}")
+        click.echo(f"Updated at: {item['updated']}")
+        click.echo(f"Keywords: {doc['keywords']}")
+        click.echo(f"\n")
+    click.echo(f"Total child docs: {click.style(counter, fg='blue')}")
 
 
 if __name__ == "__main__":

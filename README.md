@@ -121,6 +121,7 @@ docker run --rm --env-file .env -v ./sync.db:/app/sync.db colibo-document-extrat
 - Use docs delete field
 - Better error handling
 - Use colibo updated timestamp
+- Token cache (expires_in)
 
 ## License
 

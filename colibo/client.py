@@ -2,6 +2,7 @@ from datetime import datetime
 from markdownify import markdownify
 
 import requests
+import urllib.parse
 
 
 class Client:
@@ -35,6 +36,39 @@ class Client:
         self.access_token = response.json()["access_token"]
 
         return True
+
+    def _extract_id_from_url(self, url):
+        """
+            Extract the numeric ID from a URL that belongs to the base domain.
+
+            This method parses a URL and extracts the numeric ID that typically appears
+            as the last segment of the path (e.g., '81181' from
+            'https://intranet.aarhuskommune.dk/documents/81181').
+
+            Args:
+                url (str): The full URL from which to extract the ID.
+
+            Returns:
+                str or None: The extracted numeric ID as a string if found and valid,
+                            None if the URL doesn't belong to the base domain or
+                            doesn't contain a valid numeric ID as the last path segment.
+        """
+        # Parse the full URL and the base URL
+        parsed_url = urllib.parse.urlparse(url)
+        parsed_base = urllib.parse.urlparse(self.base_url)
+
+        # Ensure the URL belongs to the base domain
+        if parsed_url.netloc != parsed_base.netloc:
+            return None
+
+        # Split the path into segments
+        path_segments = parsed_url.path.strip('/').split('/')
+
+        # The ID should be the last segment in the path
+        if path_segments and path_segments[-1].isdigit():
+            return path_segments[-1]
+
+        return None
 
     def _html_clean_up(self, html_content):
         if html_content is None:
@@ -114,7 +148,7 @@ class Client:
             created = None
             updated = None
 
-            if "created" in response and response["created"]:
+            if "created" in json and json["created"]:
                 try:
                     created = datetime.fromisoformat(
                         json["created"].replace("Z", "+00:00")
@@ -122,7 +156,7 @@ class Client:
                 except (ValueError, AttributeError):
                     pass
 
-            if "updated" in response and response["updated"]:
+            if "updated" in json and json["updated"]:
                 try:
                     updated = datetime.fromisoformat(
                         json["updated"].replace("Z", "+00:00")
@@ -130,31 +164,62 @@ class Client:
                 except (ValueError, AttributeError):
                     pass
 
-            # Convert deleted field to boolean (None -> False, anything else -> True)
-            deleted = False if json.get("deleted") is None else True
-
-            # Split keywords into array by comma
+            # Split keywords into an array by comma
             keywords = json.get("fields", {}).get("keywords", "")
             keywords_array = (
                 [keyword.strip() for keyword in keywords.split(",")] if keywords else []
             )
 
+            body = (
+                json.get("fields", {}).get("body", "")
+                if json.get("fields", {}).get("body")
+                else None
+            )
+
+            doctype = json.get("type", {}).get("name").lower()
+
             # Extract the requested fields
             return {
                 "id": json.get("id"),
+                "doctype": doctype,
                 "childCount": json.get("childCount"),
                 "created": created,
                 "updated": updated,
                 "revisioning": json.get("revisioning"),
-                "deleted": deleted,
                 "title": json.get("fields", {}).get("title"),
                 "description": json.get("fields", {}).get("description"),
+                "body": body,
                 "keywords": keywords_array,
             }
         return None
 
-    def get_children(self, document_id):
-        """Get all children of a document by ID."""
+    def get_children(self, document_id, max_depth=10, current_depth=0, visited_ids=None):
+        """
+        Get all children of a document by ID recursively up to a specified maximum depth.
+
+        Args:
+            document_id: The ID of the document to get children for
+            max_depth: Maximum depth of recursion (default: 10)
+            current_depth: Current depth in the recursion (used internally)
+            visited_ids: Set of already visited document IDs to prevent circular references (used internally)
+
+        Returns:
+            Generator yielding document information with all descendants up to max_depth
+        """
+        if current_depth >= max_depth:
+            return
+
+        # Initialize visited_ids set if not provided
+        if visited_ids is None:
+            visited_ids = set()
+
+        # Check if we've already visited this document
+        if document_id in visited_ids:
+            return
+
+        # Mark this document as visited
+        visited_ids.add(document_id)
+
         access_token = self.access_token
         headers = {
             "Authorization": f"Bearer {access_token}",
@@ -172,8 +237,39 @@ class Client:
 
         # Extract only id, created, and updated fields from each child
         for item in json:
+            # if item['id'] in visited_ids:
+            #     # Skip it if it has already been visited
+            #     continue
+
             created = None
             updated = None
+
+            doctype = item.get("type", {}).get("name").lower()
+            match doctype:
+                case "link":
+                    url =  item.get("fields", {}).get("url")
+                    if url:
+                       linked_doc_id = self._extract_id_from_url(url)
+                       if linked_doc_id in visited_ids:
+                           # Skip it if it has already been visited
+                           continue
+
+                       if linked_doc_id:
+                           linked_doc = self.get_document(linked_doc_id)
+                           print(f"Count: {linked_doc_id} - {linked_doc['childCount']}")
+                           yield linked_doc
+
+                           if linked_doc['childCount']:
+                               yield from self.get_children(linked_doc_id, max_depth, current_depth + 1, visited_ids)
+                       else:
+                           # Extern link
+                           print(f"document_id: {document_id} ({linked_doc_id} - {url})")
+                           #yield from self.get_children(document_id, max_depth, current_depth + 1, visited_ids)
+
+                    # Stop processing this doc, we do not yield the link page.
+                    continue
+                case "folder":
+                    yield from self.get_children(item.get("id"), max_depth, current_depth + 1, visited_ids)
 
             if "created" in item and item["created"]:
                 try:
@@ -191,7 +287,7 @@ class Client:
                 except (ValueError, AttributeError):
                     pass
 
-            # Split keywords into array by comma
+            # Split keywords into an array by comma
             keywords = item.get("fields", {}).get("keywords", "")
             keywords_array = (
                 [keyword.strip() for keyword in keywords.split(",")] if keywords else []
@@ -207,6 +303,7 @@ class Client:
 
             yield {
                 "id": item.get("id"),
+                "doctype": doctype,
                 "created": created,
                 "updated": updated,
                 "title": item.get("fields", {}).get("title"),
