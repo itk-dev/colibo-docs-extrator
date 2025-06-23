@@ -120,6 +120,7 @@ docker run --rm --env-file .env -v ./sync.db:/app/sync.db colibo-document-extrat
 - Implement validation for knowledge ID
 - Use docs delete field
 - Better error handling
+- Use colibo updated timestamp
 
 ## License
 

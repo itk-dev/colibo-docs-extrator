@@ -130,9 +130,6 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
 
             # Check if the document already exists
             existing = sync_manager.get_document(item["id"], knowledge_id)
-            echo(
-                f"Processing document {item['id']} (Colibo) {'(already synced)' if existing else ''}"
-            )
 
             if existing:
                 # Update existing document
