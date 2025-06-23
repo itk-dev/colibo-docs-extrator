@@ -79,7 +79,10 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
         content="# " + doc["title"] + "\n\n" + doc["description"],
         filename="colibo-" + str(doc["id"]) + ".md",
         content_type="text/markdown",
-        metadata={},
+        metadata={
+            "doctype": doc['doctype'],
+            "keywords": doc['keywords'],
+        },
     )
     webui.add_file_to_knowledge(knowledge_id, res["id"])
 
@@ -90,7 +93,7 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
         knowledge_id=knowledge_id,
     )
 
-    docs = colibo.get_children(doc["id"])
+    docs = colibo.get_children(doc["id"], visited_ids={ root_doc_id })
 
     # Track statistics
     processed_count = 1  # Start with 1 for the root document
@@ -367,7 +370,7 @@ def get_knowledge(knowledge_id):
 
 @cli.command()
 @click.option("--root-doc-id", help="Id of the root document.")
-def debug(root_doc_id):
+def colibo_sync_debug(root_doc_id):
     colibo = ColiboClient(
         COLIBO_BASE_URL, COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE
     )
@@ -407,6 +410,22 @@ def debug(root_doc_id):
         click.echo(f"Keywords: {doc['keywords']}")
         click.echo(f"\n")
     click.echo(f"Total child docs: {click.style(counter, fg='blue')}")
+
+@cli.command()
+@click.argument("doc_id", type=int)
+def colibo_get_doc(doc_id):
+    colibo = ColiboClient(
+        COLIBO_BASE_URL, COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE
+    )
+    doc = colibo.get_document(doc_id)
+    click.echo(click.style("Document information:", fg="green", bold=True))
+    click.echo(f"Fetched document {doc_id}")
+    click.echo(f"Title: {doc['title']}")
+    click.echo(f"Description: {doc['description']}")
+    click.echo(f"Body: {doc['body']}")
+    click.echo(f"Child count: {doc['childCount']}")
+    click.echo(f"Created at: {doc['created']}")
+    click.echo(f"Updated at: {doc['updated']}")
 
 
 if __name__ == "__main__":

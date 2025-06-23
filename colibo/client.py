@@ -175,6 +175,9 @@ class Client:
                 if json.get("fields", {}).get("body")
                 else None
             )
+            if body:
+                body = self._html_clean_up(body)
+                body = self._html_to_markdown(body)
 
             doctype = json.get("type", {}).get("name").lower()
 
