@@ -3,7 +3,6 @@ import contextlib
 import logging
 import os
 
-
 from dotenv import load_dotenv
 
 from colibo.client import Client as ColiboClient
@@ -121,7 +120,7 @@ def sync(
         if not status:
             echo(
                 click.style(
-                    f"Error adding to knowledge {knowledge_id} with doc id {res['id']}",
+                    f"Error adding to knowledge {knowledge_id} with file id {res['id']} and doc id {doc['id']}",
                     fg="red",
                     bold=True,
                 )
@@ -155,8 +154,12 @@ def sync(
 
             # Check if the document already exists
             existing = sync_manager.get_document(item["id"], knowledge_id)
-
             if existing:
+                # Check if the document has been updated since the last sync
+                if not force_update and (item["updated"] is None or existing.last_synced >= item["updated"]):
+                    skipped_count += 1
+                    continue
+
                 # Update existing document
                 status = webui.update_file_content(existing.webui_doc_id, content)
                 if not status:

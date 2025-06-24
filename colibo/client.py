@@ -166,7 +166,7 @@ class Client:
                 try:
                     created = datetime.fromisoformat(
                         json["created"].replace("Z", "+00:00")
-                    )
+                    ).replace(tzinfo=None)
                 except (ValueError, AttributeError):
                     pass
 
@@ -174,7 +174,7 @@ class Client:
                 try:
                     updated = datetime.fromisoformat(
                         json["updated"].replace("Z", "+00:00")
-                    )
+                    ).replace(tzinfo=None)
                 except (ValueError, AttributeError):
                     pass
 
@@ -300,7 +300,7 @@ class Client:
                 try:
                     created = datetime.fromisoformat(
                         item["created"].replace("Z", "+00:00")
-                    )
+                    ).replace(tzinfo=None)
                 except (ValueError, AttributeError):
                     pass
 
@@ -308,7 +308,7 @@ class Client:
                 try:
                     updated = datetime.fromisoformat(
                         item["updated"].replace("Z", "+00:00")
-                    )
+                    ).replace(tzinfo=None)
                 except (ValueError, AttributeError):
                     pass
 

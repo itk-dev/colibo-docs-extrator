@@ -1,5 +1,5 @@
 # db/models.py
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import Column, Integer, String, DateTime, Text, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -16,7 +16,8 @@ class SyncedDocument(Base):
     colibo_doc_id = Column(Integer, nullable=False, unique=True, index=True)
     webui_doc_id = Column(String, nullable=False)
     knowledge_id = Column(String, nullable=False)
-    last_synced = Column(DateTime, default=datetime.utcnow)
+    last_synced = Column(DateTime, nullable=False
+)
 
     def __repr__(self):
         return f"<SyncedDocument(colibo_id={self.colibo_doc_id}, webui_id={self.webui_doc_id})>"
@@ -31,11 +32,16 @@ class TokenCache(Base):
     service_name = Column(String, nullable=False, unique=True, index=True)
     access_token = Column(Text, nullable=False)
     expires_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
     def is_valid(self, buffer_seconds=60):
         """Check if the token is still valid with a safety buffer."""
-        return datetime.utcnow() < self.expires_at - timedelta(seconds=buffer_seconds)
+        now = datetime.now(timezone.utc)
+        # Ensure expires_at has timezone info
+        expires = self.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        return now < expires - timedelta(seconds=buffer_seconds)
 
 
 def get_engine(db_path="sqlite:///sync.db"):

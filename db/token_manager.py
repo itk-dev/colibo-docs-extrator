@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from .models import TokenCache, get_session
 
 
@@ -21,7 +21,7 @@ class TokenManager:
     def cache_token(self, access_token, expires_in):
         """Cache a new token or update an existing one."""
         # Calculate expiration time
-        expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
 
         # Check if a record exists
         token = (
@@ -34,7 +34,7 @@ class TokenManager:
             # Update existing token
             token.access_token = access_token
             token.expires_at = expires_at
-            token.created_at = datetime.utcnow()
+            token.created_at = datetime.now(timezone.utc)
         else:
             # Create a new token record
             token = TokenCache(

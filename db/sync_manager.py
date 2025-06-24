@@ -1,5 +1,5 @@
 # db/sync_manager.py
-from datetime import datetime
+from datetime import datetime, timezone
 from .models import SyncedDocument, get_session
 
 
@@ -22,13 +22,14 @@ class SyncManager:
             # Update existing record
             if webui_doc_id is not None:
                 doc.webui_doc_id = webui_doc_id
-            doc.last_synced = datetime.utcnow()
+            doc.last_synced = datetime.now(timezone.utc)
         else:
             # Create a new record
             doc = SyncedDocument(
                 colibo_doc_id=colibo_doc_id,
                 webui_doc_id=webui_doc_id,
                 knowledge_id=knowledge_id,
+                last_synced=datetime.now(timezone.utc),
             )
             self.session.add(doc)
 
@@ -60,7 +61,7 @@ class SyncManager:
         query = self.session.query(SyncedDocument)
         return query.all()
 
-    def get_webui_id(self, colibo_doc_id):
+    def get_webui_id(self, colibo_doc_id, knowledge_id: str = None):
         """Get WebUI document ID for a given Colibo document ID."""
-        doc = self.get_document(colibo_doc_id)
+        doc = self.get_document(colibo_doc_id, knowledge_id)
         return doc.webui_doc_id if doc else None

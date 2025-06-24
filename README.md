@@ -43,7 +43,8 @@ WEBUI_KNOWLEDGE_ID=your_knowledge_id
 
 ### Synchronize Documents
 
-Synchronize documents from Colibo to Open-WebUI:
+Synchronize documents from Colibo to Open-WebUI (if `--force-update` not given, only documents updated since last sync
+is updated in open-webui):
 
 ``` bash
 python main.py sync --root-doc-id xxxxx
@@ -75,6 +76,7 @@ Remove all synchronized documents from Open-WebUI:
 ``` bash
 python main.py sync:delete-all
 ```
+
 Options:
 
 - `--knowledge-id`: Knowledge id from Open-Webui
@@ -111,6 +113,7 @@ python main.py debug:colibo:sync --root-doc-id XXXX
 
 Options:
 - 
+
 - : ID of the root document to debug `--root-doc-id`
 
 ### Get single document from colibo
@@ -144,7 +147,6 @@ docker run --rm --env-file .env -v ./sync.db:/app/sync.db colibo-document-extrat
 ## Todo
 
 - Add support for files attached to Colibo documents
-- Use colibo updated timestamp (--force-updates)
 - Handle external links in colibo
 
 ## License
