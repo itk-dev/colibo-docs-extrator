@@ -99,8 +99,31 @@ Options:
 
 - `--knowledge-id`: Knowledge id from Open-Webui
 
+### Get data from colibo (debug)
 
-@@@@@@@@@@@@@TODO:  Update with new methods
+This command appears to be a debugging tool that provides detailed information about a Colibo document and its children.
+Usage example:
+
+``` bash
+python main.py colibo-sync-debug --root-doc-id XXXX
+```
+
+Options:
+- 
+- : ID of the root document to debug `--root-doc-id`
+
+### Get single document from colibo
+
+This command retrieves and displays information about a specific document from Colibo.
+Usage example:
+
+``` bash
+python main.py colibo-get-doc DOC_ID
+```
+
+Arguments:
+
+- `DOC_ID`: The ID of the Colibo document to retrieve (required)
 
 ## Docker Support
 
