@@ -10,7 +10,6 @@ COPY pyproject.toml ./
 RUN pip install --upgrade pip \
     && pip install .
 
-# Copy the rest of the source code
 COPY . .
 
 ENTRYPOINT ["python", "main.py"]

@@ -141,7 +141,7 @@ docker build -t colibo-document-extrator .
 Run the container:
 
 ``` bash
-docker run --rm --env-file .env -v ./sync.db:/app/sync.db colibo-document-extrator --help
+docker run --rm --volume .env:/app/.env --volume ./sync.db:/app/sync.db colibo-document-extrator --help
 ```
 
 ## Todo
