@@ -49,7 +49,7 @@ class Client:
             content (str): The new content to replace the file with
 
         Returns:
-            Response object from the API request
+            True on success, False otherwise
         """
         headers = {
             "Authorization": f"Bearer {self.token}",
@@ -91,7 +91,7 @@ class Client:
             file_id (str): The ID of the file to add
 
         Returns:
-            Response object from the API request
+            True on success, False otherwise
         """
         headers = {
             "Authorization": f"Bearer {self.token}",
@@ -103,7 +103,8 @@ class Client:
 
         url = f"{self.base_url}/api/v1/knowledge/{knowledge_id}/file/add"
         response = requests.post(url, headers=headers, json=data)
-        return response
+
+        return response.status_code == 200
 
     def remove_file_from_knowledge(self, knowledge_id, file_id):
         """

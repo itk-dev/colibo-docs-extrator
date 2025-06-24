@@ -31,6 +31,7 @@ logger.setLevel(logging.DEBUG)
 init_db()
 sync_manager = SyncManager()
 
+
 @click.group()
 def cli():
     """Colibo document synchronization tool."""
@@ -52,7 +53,12 @@ def silent_progressbar(iterable, **kwargs):
     default=WEBUI_KNOWLEDGE_ID,
 )
 @click.option("--force-update", is_flag=True, help="Force update all documents.")
-def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_ID, force_update: bool = False):
+def sync(
+    root_doc_id,
+    quiet: bool = False,
+    knowledge_id: str = WEBUI_KNOWLEDGE_ID,
+    force_update: bool = False,
+):
     """Synchronize documents from Colibo to Open-Webui."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
     colibo = ColiboClient(
@@ -64,11 +70,19 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
         if not quiet:
             click.echo(*args, **kwargs)
 
+    # Test knowledge exists before processing documents
+    try:
+        webui.get_knowledge(knowledge_id)
+    except Exception as e:
+        echo(click.style("Error accessing knowledge resource!", fg="red", bold=True))
+        exit(-1)
+
     # Track statistics
     processed_count = 0
     skipped_count = 0
     updated_count = 0
     new_count = 0
+    failed_count = 0
 
     echo(f"Syncing root document {root_doc_id} (Colibo)")
 
@@ -103,8 +117,18 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
                 "keywords": doc["keywords"],
             },
         )
-        webui.add_file_to_knowledge(knowledge_id, res["id"])
-        new_count += 1
+        status = webui.add_file_to_knowledge(knowledge_id, res["id"])
+        if not status:
+            echo(
+                click.style(
+                    f"Error adding to knowledge {knowledge_id} with doc id {res['id']}",
+                    fg="red",
+                    bold=True,
+                )
+            )
+            failed_count += 1
+        else:
+            new_count += 1
 
         # Record sync in the database
         sync_manager.record_sync(
@@ -162,9 +186,18 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
                     },
                 )
                 webui_doc_id = res["id"]
-                red = webui.add_file_to_knowledge(knowledge_id, webui_doc_id)
-                ## TODO check that the doc is add to the knowledge successfully
-                new_count += 1
+                status = webui.add_file_to_knowledge(knowledge_id, webui_doc_id)
+                if not status:
+                    echo(
+                        click.style(
+                            f"Error adding to knowledge {knowledge_id} with doc id {webui_doc_id}",
+                            fg="red",
+                            bold=True,
+                        )
+                    )
+                    failed_count += 1
+                else:
+                    new_count += 1
 
                 # Record sync in the database
                 sync_manager.record_sync(
@@ -182,6 +215,7 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
     echo(f"Total documents processed: {processed_count}")
     echo(f"New documents created: {new_count}")
     echo(f"Existing documents updated: {updated_count}")
+    echo(f"Failed to sync documents: {failed_count}")
     echo(f"Documents skipped: {skipped_count}")
     echo("")
     echo(click.style("✓ Sync completed successfully!", fg="green", bold=True))
@@ -199,6 +233,13 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
 def delete_doc(colibo_id, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     """Delete a document from WebUI and mark it as deleted in the database."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
+
+    # Test knowledge exists before processing documents
+    try:
+        webui.get_knowledge(knowledge_id)
+    except Exception as e:
+        click.echo(click.style("Error accessing knowledge resource!", fg="red", bold=True))
+        exit(-1)
 
     # Get a document from the database
     doc = sync_manager.get_document(colibo_id, knowledge_id)
@@ -240,6 +281,13 @@ def delete_doc(colibo_id, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
 def delete_all_docs(confirm, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     """Delete all documents from WebUI and remove them from the database."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
+
+    # Test knowledge exists before processing documents
+    try:
+        webui.get_knowledge(knowledge_id)
+    except Exception as e:
+        click.echo(click.style("Error accessing knowledge resource!", fg="red", bold=True))
+        exit(-1)
 
     # Get all documents
     docs = sync_manager.get_all_documents()
