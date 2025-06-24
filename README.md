@@ -54,6 +54,7 @@ Options:
 - `--root-doc-id`: ID of the root document in Colibo
 - `--quiet`: Suppress progress display
 - `--knowledge-id`: Knowledge id from Open-Webui
+- `--force-update`: Force update all documents
 
 ### Delete a Document
 

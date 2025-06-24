@@ -284,9 +284,10 @@ class Client:
                                     visited_ids,
                                 )
                         else:
-                            # Extern link
-                            print(f"External document_id: {document_id} ({url})")
+                            # TODO: Extern link
+                            # print(f"External document_id: {document_id} ({url})")
                             # yield from self.get_children(document_id, max_depth, current_depth + 1, visited_ids)
+                            pass
 
                     # Stop processing this doc, we do not yield the link page.
                     continue

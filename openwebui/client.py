@@ -61,7 +61,7 @@ class Client:
 
         url = f"{self.base_url}/api/v1/files/{file_id}/data/content/update"
         response = requests.post(url, headers=headers, json=data)
-        return response
+        return response.status_code == 200
 
     def delete_file(self, file_id):
         """

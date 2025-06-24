@@ -10,17 +10,18 @@ class SyncManager:
         """Initialize with an optional session."""
         self.session = session or get_session()
 
-    def record_sync(self, colibo_doc_id, webui_doc_id, knowledge_id):
+    def record_sync(self, colibo_doc_id, knowledge_id, webui_doc_id: str = None):
         """Record a new sync or update an existing record."""
         doc = (
             self.session.query(SyncedDocument)
-            .filter_by(colibo_doc_id=colibo_doc_id)
+            .filter_by(colibo_doc_id=colibo_doc_id, knowledge_id=knowledge_id)
             .first()
         )
 
         if doc:
             # Update existing record
-            doc.webui_doc_id = webui_doc_id
+            if webui_doc_id is not None:
+                doc.webui_doc_id = webui_doc_id
             doc.last_synced = datetime.utcnow()
         else:
             # Create a new record

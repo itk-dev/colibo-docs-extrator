@@ -8,9 +8,9 @@ from dotenv import load_dotenv
 
 from colibo.client import Client as ColiboClient
 from openwebui.client import Client as WebUIClient
-
 from db.models import init_db
 from db.sync_manager import SyncManager
+from helpers import build_content, filename
 
 load_dotenv()
 # Colibo settings
@@ -31,10 +31,9 @@ logger.setLevel(logging.DEBUG)
 init_db()
 sync_manager = SyncManager()
 
-
 @click.group()
 def cli():
-    """Calibo document synchronization tool."""
+    """Colibo document synchronization tool."""
     pass
 
 
@@ -44,7 +43,7 @@ def silent_progressbar(iterable, **kwargs):
     yield iterable
 
 
-@cli.command(name="")
+@cli.command(name="sync")
 @click.option("--root-doc-id", help="Id of the root document.")
 @click.option("--quiet", is_flag=True, help="Do not display progress.")
 @click.option(
@@ -52,7 +51,8 @@ def silent_progressbar(iterable, **kwargs):
     help="ID of the knowledge resource to retrieve",
     default=WEBUI_KNOWLEDGE_ID,
 )
-def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
+@click.option("--force-update", is_flag=True, help="Force update all documents.")
+def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_ID, force_update: bool = False):
     """Synchronize documents from Colibo to Open-Webui."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
     colibo = ColiboClient(
@@ -64,33 +64,56 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
         if not quiet:
             click.echo(*args, **kwargs)
 
-    doc = colibo.get_document(root_doc_id)
-    echo(f"Syncing root document {root_doc_id} (Colibo)")
-    res = webui.upload_from_string(
-        content="# " + doc["title"] + "\n\n" + doc["description"],
-        filename="colibo-" + str(doc["id"]) + ".md",
-        content_type="text/markdown",
-        metadata={
-            "doctype": doc["doctype"],
-            "keywords": doc["keywords"],
-        },
-    )
-    webui.add_file_to_knowledge(knowledge_id, res["id"])
-
-    # Record sync in the database
-    sync_manager.record_sync(
-        colibo_doc_id=root_doc_id,
-        webui_doc_id=res["id"],
-        knowledge_id=knowledge_id,
-    )
-
     # Track statistics
-    processed_count = 1  # Start with 1 for the root document
+    processed_count = 0
     skipped_count = 0
     updated_count = 0
-    new_count = 1
-    page_count = 0
-    link_count = 0
+    new_count = 0
+
+    echo(f"Syncing root document {root_doc_id} (Colibo)")
+
+    # Get root document
+    doc = colibo.get_document(root_doc_id)
+    content = build_content(doc)
+
+    # Check if the document already exists
+    existing = sync_manager.get_document(doc["id"], knowledge_id)
+
+    if existing:
+        # Update existing document
+        status = webui.update_file_content(existing.webui_doc_id, content)
+        if not status:
+            echo(click.style("Error updating document!", fg="red", bold=True))
+            exit(-1)
+
+        # Update timestamp for sync in db
+        sync_manager.record_sync(
+            colibo_doc_id=root_doc_id,
+            knowledge_id=knowledge_id,
+        )
+
+        updated_count += 1
+    else:
+        res = webui.upload_from_string(
+            content=content,
+            filename=filename(doc["id"]),
+            content_type="text/markdown",
+            metadata={
+                "doctype": doc["doctype"],
+                "keywords": doc["keywords"],
+            },
+        )
+        webui.add_file_to_knowledge(knowledge_id, res["id"])
+        new_count += 1
+
+        # Record sync in the database
+        sync_manager.record_sync(
+            colibo_doc_id=root_doc_id,
+            webui_doc_id=res["id"],
+            knowledge_id=knowledge_id,
+        )
+
+    processed_count += 1
 
     # Choose the appropriate progress bar based on the quiet flag
     progress_context = silent_progressbar if quiet else click.progressbar
@@ -101,34 +124,27 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
     # Process each child document with a progress bar
     with progress_context(docs, label="Syncing child documents") as bar:
         for item in bar:
-            # Check if all content fields are None
-            if (
-                item["title"] is None
-                and item["description"] is None
-                and item["body"] is None
-            ):
+            content = build_content(item)
+            if content is None:
                 skipped_count += 1
                 continue
-
-            # Prepare content with available data
-            content_parts = []
-            if item["title"]:
-                content_parts.append("# " + item["title"])
-            if item["description"]:
-                content_parts.append(item["description"])
-            if item["body"]:
-                content_parts.append(item["body"])
-
-            # Join the content parts with double newlines
-            content = "\n\n".join(content_parts)
 
             # Check if the document already exists
             existing = sync_manager.get_document(item["id"], knowledge_id)
 
             if existing:
                 # Update existing document
-                res = webui.update_file_content(existing.webui_doc_id, content)
-                ## TODO check that the doc updated successfully
+                status = webui.update_file_content(existing.webui_doc_id, content)
+                if not status:
+                    echo(click.style("Error updating document!", fg="red", bold=True))
+                    exit(-1)
+
+                # Update timestamp for sync in db
+                sync_manager.record_sync(
+                    colibo_doc_id=root_doc_id,
+                    knowledge_id=knowledge_id,
+                )
+
                 updated_count += 1
             else:
                 if item["doctype"] == "file":
@@ -138,7 +154,7 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
 
                 res = webui.upload_from_string(
                     content=content,
-                    filename="colibo-" + str(item["id"]) + ".md",
+                    filename=filename(doc["id"]),
                     content_type="text/markdown",
                     metadata={
                         "doctype": item["doctype"],
@@ -157,24 +173,16 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
                     knowledge_id=knowledge_id,
                 )
 
-            doctype = item.get("doctype", {})
-            if doctype == "page":
-                page_count += 1
-            elif doctype == "link":
-                link_count += 1
-
             processed_count += 1
 
     # Add a summary at the end
     echo("")
     echo(click.style(f"Sync Summary:", fg="blue", bold=True))
+    echo(f"Root document: {root_doc_id} (Colibo)")
     echo(f"Total documents processed: {processed_count}")
     echo(f"New documents created: {new_count}")
     echo(f"Existing documents updated: {updated_count}")
     echo(f"Documents skipped: {skipped_count}")
-    echo(f"Page documents: {page_count}")
-    echo(f"Link documents: {link_count}")
-    echo(f"Root document: {root_doc_id} (Colibo)")
     echo("")
     echo(click.style("✓ Sync completed successfully!", fg="green", bold=True))
 
