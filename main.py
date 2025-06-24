@@ -44,7 +44,7 @@ def silent_progressbar(iterable, **kwargs):
     yield iterable
 
 
-@cli.command()
+@cli.command(name="")
 @click.option("--root-doc-id", help="Id of the root document.")
 @click.option("--quiet", is_flag=True, help="Do not display progress.")
 @click.option(
@@ -179,7 +179,7 @@ def sync(root_doc_id, quiet: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_I
     echo(click.style("✓ Sync completed successfully!", fg="green", bold=True))
 
 
-@cli.command()
+@cli.command(name="sync:delete")
 @click.option(
     "--colibo-id", help="Colibo document ID to delete", required=True, type=int
 )
@@ -222,7 +222,7 @@ def delete_doc(colibo_id, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
         click.echo(f"Error: {str(e)}")
 
 
-@cli.command()
+@cli.command(name="sync:delete-all")
 @click.option("--confirm", is_flag=True, help="Confirm deletion without prompting")
 @click.option(
     "--knowledge-id",
@@ -298,7 +298,7 @@ def delete_all_docs(confirm, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
                 click.echo(f"    Error: {error}")
 
 
-@cli.command()
+@cli.command(name="db:list")
 def list_docs():
     """List all synced documents."""
     docs = sync_manager.get_all_documents()
@@ -346,13 +346,13 @@ def list_docs():
     click.echo(f"\nTotal: {len(rows)} documents")
 
 
-@cli.command()
+@cli.command(name="knowledge:get")
 @click.option(
     "--knowledge-id",
     help="ID of the knowledge resource to retrieve",
     default=WEBUI_KNOWLEDGE_ID,
 )
-def get_knowledge(knowledge_id):
+def get_knowledge(knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     """Retrieve information about a specific knowledge resource."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
 
@@ -369,9 +369,10 @@ def get_knowledge(knowledge_id):
         click.echo(f"Error: {str(e)}")
 
 
-@cli.command()
+@cli.command(name="debug:colibo:sync")
 @click.option("--root-doc-id", help="Id of the root document.")
 def colibo_sync_debug(root_doc_id):
+    """Debug Colibo synchronization. See the basic data from colibo without sending it to Open-webui"""
     colibo = ColiboClient(
         COLIBO_BASE_URL, COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE
     )
@@ -413,9 +414,10 @@ def colibo_sync_debug(root_doc_id):
     click.echo(f"Total child docs: {click.style(counter, fg='blue')}")
 
 
-@cli.command()
+@cli.command(name="debug:colibo:get-doc")
 @click.argument("doc_id", type=int)
 def colibo_get_doc(doc_id):
+    """Debug Colibo document retrieval. See the basic data from colibo without sending it to Open-webui"""
     colibo = ColiboClient(
         COLIBO_BASE_URL, COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE
     )

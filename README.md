@@ -60,7 +60,7 @@ Options:
 Delete a specific document from Open-WebUI:
 
 ``` bash
-python main.py delete-doc --colibo-id ID
+python main.py sync:delete --colibo-id ID
 ```
 
 Options:
@@ -72,7 +72,7 @@ Options:
 Remove all synchronized documents from Open-WebUI:
 
 ``` bash
-python main.py delete-all-docs
+python main.py sync:delete-all
 ```
 Options:
 
@@ -81,10 +81,10 @@ Options:
 
 ### List Documents
 
-View all synchronized documents:
+List all synchronized documents:
 
 ``` bash
-python main.py list-docs
+python main.py db:list
 ```
 
 ### Get knowledge
@@ -92,12 +92,12 @@ python main.py list-docs
 Check that knowledge exists in Open-Webui.
 
 ```bash
-python main.py get-knowledge --knowledge-id xxxx-xxxx-xxxx
+python main.py knowledge:get --knowledge-id xxxx-xxxx-xxxx
 ```
 
 Options:
 
-- `--knowledge-id`: Knowledge id from Open-Webui
+- `--knowledge-id`: Knowledge id from Open-Webui (defaults to ID from environment)
 
 ### Get data from colibo (debug)
 
@@ -105,7 +105,7 @@ This command appears to be a debugging tool that provides detailed information a
 Usage example:
 
 ``` bash
-python main.py colibo-sync-debug --root-doc-id XXXX
+python main.py debug:colibo:sync --root-doc-id XXXX
 ```
 
 Options:
@@ -118,7 +118,7 @@ This command retrieves and displays information about a specific document from C
 Usage example:
 
 ``` bash
-python main.py colibo-get-doc DOC_ID
+python main.py debug:colibo:get-doc DOC_ID
 ```
 
 Arguments:
