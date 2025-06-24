@@ -1,6 +1,6 @@
 # db/models.py
-from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, create_engine
+from datetime import datetime, timedelta
+from sqlalchemy import Column, Integer, String, DateTime, Text, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -20,6 +20,22 @@ class SyncedDocument(Base):
 
     def __repr__(self):
         return f"<SyncedDocument(colibo_id={self.colibo_doc_id}, webui_id={self.webui_doc_id})>"
+
+
+class TokenCache(Base):
+    """Model to cache API tokens."""
+
+    __tablename__ = "token_cache"
+
+    id = Column(Integer, primary_key=True)
+    service_name = Column(String, nullable=False, unique=True, index=True)
+    access_token = Column(Text, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def is_valid(self, buffer_seconds=60):
+        """Check if the token is still valid with a safety buffer."""
+        return datetime.utcnow() < self.expires_at - timedelta(seconds=buffer_seconds)
 
 
 def get_engine(db_path="sqlite:///sync.db"):

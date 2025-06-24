@@ -99,6 +99,9 @@ Options:
 
 - `--knowledge-id`: Knowledge id from Open-Webui
 
+
+@@@@@@@@@@@@@TODO:  Update with new methods
+
 ## Docker Support
 
 A Dockerfile is provided for containerized deployment.
@@ -119,8 +122,7 @@ docker run --rm --env-file .env -v ./sync.db:/app/sync.db colibo-document-extrat
 - Add support for files attached to Colibo documents
 - Implement validation for knowledge ID
 - Better error handling
-- Use colibo updated timestamp
-- Token cache (expires_in)
+- Use colibo updated timestamp (--force-updates)
 - Handle external links in colibo
 
 ## License

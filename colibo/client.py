@@ -3,6 +3,9 @@ from markdownify import markdownify
 
 import requests
 import urllib.parse
+from datetime import datetime, timedelta
+
+from db.token_manager import TokenManager
 
 
 class Client:
@@ -12,30 +15,42 @@ class Client:
         self.client_secret = client_secret
         self.scope = scope
         self.access_token = None
+        self.token_manager = TokenManager("colibo")
 
-    @property
-    def access_token(self):
-        if self._access_token is None:
-            self._get_access_token()
-        return self._access_token
+    def _get_token(self):
+        """Get a valid access token, renewing if necessary."""
+        # Try to get from the cache first
+        cached_token = self.token_manager.get_valid_token()
+        if cached_token:
+            self.access_token = cached_token
+            return cached_token
 
-    @access_token.setter
-    def access_token(self, value):
-        self._access_token = value
+        # If not in cache or expired, get a new one
+        return self._refresh_token()
 
-    def _get_access_token(self):
+    def _refresh_token(self):
+        """Fetch a new token from the API."""
         data = {
+            "grant_type": "client_credentials",
             "client_id": self.client_id,
             "client_secret": self.client_secret,
-            "grant_type": "client_credentials",
             "scope": self.scope,
         }
         response = requests.post(
             f"{self.base_url}/auth/oauth2/connect/token", data=data
         )
-        self.access_token = response.json()["access_token"]
+        response.raise_for_status()
+        token_data = response.json()
 
-        return True
+        # Store the token and calculate expiry time
+        self.access_token = token_data["access_token"]
+        # Convert expires_in (seconds) to a datetime
+        expires_in = token_data.get("expires_in", 3600)
+
+        # Cache the token
+        self.token_manager.cache_token(self.access_token, expires_in)
+
+        return self.access_token
 
     def _extract_id_from_url(self, url):
         """
@@ -128,9 +143,8 @@ class Client:
 
     def get_document(self, document_id):
         """Get a single document by ID."""
-        access_token = self.access_token
         headers = {
-            "Authorization": f"Bearer {access_token}",
+            "Authorization": f"Bearer {self._get_token()}",
             "Content-Type": "application/json",
         }
         response = requests.get(
@@ -225,9 +239,8 @@ class Client:
         # Mark this document as visited
         visited_ids.add(document_id)
 
-        access_token = self.access_token
         headers = {
-            "Authorization": f"Bearer {access_token}",
+            "Authorization": f"Bearer {self._get_token()}",
             "Content-Type": "application/json",
         }
         response = requests.get(
