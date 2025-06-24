@@ -112,7 +112,6 @@ python main.py debug:colibo:sync --root-doc-id XXXX
 ```
 
 Options:
-- 
 
 - : ID of the root document to debug `--root-doc-id`
 
