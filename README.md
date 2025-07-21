@@ -37,6 +37,9 @@ COLIBO_SCOPE=your_scope
 WEBUI_BASE_URL=your_webui_url
 WEBUI_TOKEN=your_webui_token
 WEBUI_KNOWLEDGE_ID=your_knowledge_id
+
+# Application
+DATABASE_URL=sqlite:///sync.db
 ```
 
 ## Usage

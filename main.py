@@ -156,7 +156,9 @@ def sync(
             existing = sync_manager.get_document(item["id"], knowledge_id)
             if existing:
                 # Check if the document has been updated since the last sync
-                if not force_update and (item["updated"] is None or existing.last_synced >= item["updated"]):
+                if not force_update and (
+                    item["updated"] is None or existing.last_synced >= item["updated"]
+                ):
                     skipped_count += 1
                     continue
 
@@ -241,7 +243,9 @@ def delete_doc(colibo_id, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     try:
         webui.get_knowledge(knowledge_id)
     except Exception as e:
-        click.echo(click.style("Error accessing knowledge resource!", fg="red", bold=True))
+        click.echo(
+            click.style("Error accessing knowledge resource!", fg="red", bold=True)
+        )
         exit(-1)
 
     # Get a document from the database
@@ -289,7 +293,9 @@ def delete_all_docs(confirm, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     try:
         webui.get_knowledge(knowledge_id)
     except Exception as e:
-        click.echo(click.style("Error accessing knowledge resource!", fg="red", bold=True))
+        click.echo(
+            click.style("Error accessing knowledge resource!", fg="red", bold=True)
+        )
         exit(-1)
 
     # Get all documents

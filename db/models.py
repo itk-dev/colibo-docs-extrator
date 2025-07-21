@@ -1,4 +1,5 @@
 # db/models.py
+import os
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import Column, Integer, String, DateTime, Text, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -16,8 +17,7 @@ class SyncedDocument(Base):
     colibo_doc_id = Column(Integer, nullable=False, unique=True, index=True)
     webui_doc_id = Column(String, nullable=False)
     knowledge_id = Column(String, nullable=False)
-    last_synced = Column(DateTime, nullable=False
-)
+    last_synced = Column(DateTime, nullable=False)
 
     def __repr__(self):
         return f"<SyncedDocument(colibo_id={self.colibo_doc_id}, webui_id={self.webui_doc_id})>"
@@ -44,11 +44,6 @@ class TokenCache(Base):
         return now < expires - timedelta(seconds=buffer_seconds)
 
 
-def get_engine(db_path="sqlite:///sync.db"):
-    """Create and return a database engine."""
-    return create_engine(db_path)
-
-
 def get_session(engine=None):
     """Create and return a session factory bound to the engine."""
     if engine is None:
@@ -57,8 +52,18 @@ def get_session(engine=None):
     return Session()
 
 
-def init_db(db_path="sqlite:///sync.db"):
+def get_database_path():
+    """Get the path to the database file."""
+    return os.environ.get("DATABASE_URL", "sqlite:///sync.db")
+
+
+def get_engine():
+    """Create and return a database engine."""
+    return create_engine(get_database_path())
+
+
+def init_db():
     """Initialize the database, creating tables if they don't exist."""
-    engine = get_engine(db_path)
+    engine = get_engine()
     Base.metadata.create_all(engine)
     return engine
