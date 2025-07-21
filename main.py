@@ -1,3 +1,5 @@
+from email.policy import default
+
 import click
 import contextlib
 import logging
@@ -12,11 +14,14 @@ from db.sync_manager import SyncManager
 from helpers import build_content, filename
 
 load_dotenv()
+
 # Colibo settings
 COLIBO_BASE_URL = os.environ.get("COLIBO_BASE_URL")
 COLIBO_CLIENT_ID = os.environ.get("COLIBO_CLIENT_ID")
 COLIBO_CLIENT_SECRET = os.environ.get("COLIBO_CLIENT_SECRET")
 COLIBO_SCOPE = os.environ.get("COLIBO_SCOPE")
+COLIBO_ROOT_DOC_ID = os.environ.get("COLIBO_ROOT_DOC_ID")
+
 # Open-webui settings
 WEBUI_BASE_URL = os.environ.get("WEBUI_BASE_URL")
 WEBUI_TOKEN = os.environ.get("WEBUI_TOKEN")
@@ -44,7 +49,7 @@ def silent_progressbar(iterable, **kwargs):
 
 
 @cli.command(name="sync")
-@click.option("--root-doc-id", help="Id of the root document.")
+@click.option("--root-doc-id", help="Id of the root document.", default=COLIBO_ROOT_DOC_ID)
 @click.option("--quiet", is_flag=True, help="Do not display progress.")
 @click.option(
     "--knowledge-id",
@@ -160,6 +165,7 @@ def sync(
                     item["updated"] is None or existing.last_synced >= item["updated"]
                 ):
                     skipped_count += 1
+                    processed_count += 1
                     continue
 
                 # Update existing document
@@ -435,7 +441,7 @@ def get_knowledge(knowledge_id: str = WEBUI_KNOWLEDGE_ID):
 
 
 @cli.command(name="debug:colibo:sync")
-@click.option("--root-doc-id", help="Id of the root document.")
+@click.option("--root-doc-id", help="Id of the root document.", default=COLIBO_ROOT_DOC_ID)
 def colibo_sync_debug(root_doc_id):
     """Debug Colibo synchronization. See the basic data from colibo without sending it to Open-webui"""
     colibo = ColiboClient(

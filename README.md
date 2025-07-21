@@ -32,6 +32,7 @@ COLIBO_BASE_URL=https://xxxx
 COLIBO_CLIENT_ID=your_client_id
 COLIBO_CLIENT_SECRET=your_client_secret
 COLIBO_SCOPE=your_scope
+COLIBO_ROOT_DOC_ID=123456 # Optional, used as fallback if not given as argument
 
 # Open-webui settings
 WEBUI_BASE_URL=your_webui_url
