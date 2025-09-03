@@ -3,6 +3,7 @@ from markdownify import markdownify
 
 import requests
 import urllib.parse
+import re
 from datetime import datetime, timedelta
 
 from db.token_manager import TokenManager
@@ -90,8 +91,6 @@ class Client:
             return None
 
         # Remove CDATA sections
-        import re
-
         html_content = re.sub(
             r"<!\[CDATA\[(.*?)\]\]>", r"\1", html_content, flags=re.DOTALL
         )
@@ -132,6 +131,8 @@ class Client:
                 bullets="-",
                 convert_links=True,
             )
+
+            markdown_content = re.sub(r'<br\s*/?>', '\n\n', markdown_content)
 
             return markdown_content
         except ImportError:

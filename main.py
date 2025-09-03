@@ -114,7 +114,7 @@ def sync(
     else:
         res = webui.upload_from_string(
             content=content,
-            filename=filename(doc["id"]),
+            filename=filename(doc.get('title', doc['id'])),
             content_type="text/markdown",
             metadata={
                 "doctype": doc["doctype"],
@@ -189,7 +189,7 @@ def sync(
 
                 res = webui.upload_from_string(
                     content=content,
-                    filename=filename(doc["id"]),
+                    filename=filename(item.get('title', item['id'])),
                     content_type="text/markdown",
                     metadata={
                         "doctype": item["doctype"],

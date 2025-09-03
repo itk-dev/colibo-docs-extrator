@@ -18,4 +18,4 @@ def build_content(item):
 
 def filename(doc_id: int, extension: str = "md"):
     """Build a filename for a document"""
-    return "colibo-" + str(doc_id) + "." + extension
+    return str(doc_id) + "." + extension
