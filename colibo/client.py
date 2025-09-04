@@ -132,7 +132,7 @@ class Client:
                 convert_links=True,
             )
 
-            markdown_content = re.sub(r'<br\s*/?>', '\n\n', markdown_content)
+            markdown_content = re.sub(r"<br\s*/?>", "\n\n", markdown_content)
 
             return markdown_content
         except ImportError:

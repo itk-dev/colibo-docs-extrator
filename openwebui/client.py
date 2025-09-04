@@ -1,5 +1,5 @@
 import requests
-from poetry.console.commands import self
+from openwebui.exceptions import WebUINotFoundError, WebUIError
 
 
 class Client:
@@ -10,7 +10,7 @@ class Client:
 
     def upload_from_string(self, content, filename, content_type, metadata):
         """
-        Upload file content from an in-memory string or bytes object.
+        Upload file content from an in-memory string or byte object.
 
         Args:
             content (str or bytes): The content to upload
@@ -35,8 +35,14 @@ class Client:
             "metadata": str(metadata).replace("'", '"')
         }  # Convert Python dict to JSON string
 
-        url = f"{self.base_url}/api/v1/files/?process=true&internal=false"
+        url = f"{self.base_url}/api/v1/files/?process=true&process_in_background=false"
         response = requests.post(url, headers=headers, data=form_data, files=files)
+
+        # Check if the response status code is 200
+        if response.status_code != 200:
+            raise WebUIError(
+                f"Upload from string API request failed with status code {response.status_code}: {response.text}"
+            )
 
         return response.json()
 
@@ -61,7 +67,14 @@ class Client:
 
         url = f"{self.base_url}/api/v1/files/{file_id}/data/content/update"
         response = requests.post(url, headers=headers, json=data)
-        return response.status_code == 200
+
+        # Check if the response status code is not 200
+        if response.status_code != 200:
+            raise WebUIError(
+                f"Update file content API request failed with status code {response.status_code}: {response.text}"
+            )
+
+        return True
 
     def delete_file(self, file_id):
         """
@@ -80,6 +93,13 @@ class Client:
 
         url = f"{self.base_url}/api/v1/files/{file_id}"
         response = requests.delete(url, headers=headers)
+
+        # Check if the response status code is not successful (2xx range)
+        if not (200 <= response.status_code < 300):
+            raise WebUIError(
+                f"Delete file API request failed with status code {response.status_code}: {response.text}"
+            )
+
         return response
 
     def add_file_to_knowledge(self, knowledge_id, file_id):
@@ -104,7 +124,13 @@ class Client:
         url = f"{self.base_url}/api/v1/knowledge/{knowledge_id}/file/add"
         response = requests.post(url, headers=headers, json=data)
 
-        return response.status_code == 200
+        # Check if the response status code is not 200
+        if response.status_code != 200:
+            raise WebUIError(
+                f"Add knowledge API request failed with status code {response.status_code}: {response.text}"
+            )
+
+        return True
 
     def remove_file_from_knowledge(self, knowledge_id, file_id):
         """
@@ -127,6 +153,16 @@ class Client:
 
         url = f"{self.base_url}/api/v1/knowledge/{knowledge_id}/file/remove"
         response = requests.post(url, headers=headers, json=data)
+
+        # Check if the response status code is not successful (2xx range)
+        if not (200 <= response.status_code < 300):
+            if response.status_code == 404:
+                raise WebUINotFoundError(f"{response.text}")
+            else:
+                raise WebUIError(
+                    f"Remove from knowledge API request failed with status code {response.status_code}: {response.text}"
+                )
+
         return response
 
     def get_knowledge(self, knowledge_id):
@@ -149,8 +185,8 @@ class Client:
 
         # Check if the response status code is 200
         if response.status_code != 200:
-            raise Exception(
-                f"API request failed with status code {response.status_code}: {response.text}"
+            raise WebUIError(
+                f"Get knowledge API request failed with status code {response.status_code}: {response.text}"
             )
 
         return response.json()

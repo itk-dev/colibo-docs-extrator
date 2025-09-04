@@ -12,6 +12,7 @@ from openwebui.client import Client as WebUIClient
 from db.models import init_db
 from db.sync_manager import SyncManager
 from helpers import build_content, filename
+from openwebui.exceptions import WebUIError, WebUINotFoundError
 
 load_dotenv()
 
@@ -49,7 +50,9 @@ def silent_progressbar(iterable, **kwargs):
 
 
 @cli.command(name="sync")
-@click.option("--root-doc-id", help="Id of the root document.", default=COLIBO_ROOT_DOC_ID)
+@click.option(
+    "--root-doc-id", help="Id of the root document.", default=COLIBO_ROOT_DOC_ID
+)
 @click.option("--quiet", is_flag=True, help="Do not display progress.")
 @click.option(
     "--knowledge-id",
@@ -114,7 +117,7 @@ def sync(
     else:
         res = webui.upload_from_string(
             content=content,
-            filename=filename(doc.get('title', doc['id'])),
+            filename=filename(doc.get("title", doc["id"])),
             content_type="text/markdown",
             metadata={
                 "doctype": doc["doctype"],
@@ -189,7 +192,7 @@ def sync(
 
                 res = webui.upload_from_string(
                     content=content,
-                    filename=filename(item.get('title', item['id'])),
+                    filename=filename(item.get("title", item["id"])),
                     content_type="text/markdown",
                     metadata={
                         "doctype": item["doctype"],
@@ -331,17 +334,17 @@ def delete_all_docs(confirm, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     with click.progressbar(docs, label="Deleting documents") as bar:
         for doc in bar:
             try:
-                # Delete from WebUI
+                # Files are autumatically deleted when the knowledge mapping is deleted.
                 webui.remove_file_from_knowledge(knowledge_id, doc.webui_doc_id)
-                webui.delete_file(doc.webui_doc_id)
-
-                # Delete from database
-                sync_manager.delete_document(doc.colibo_doc_id, knowledge_id)
-
-                success_count += 1
-            except Exception as e:
+            except WebUIError as e:
                 error_count += 1
                 errors.append((doc.colibo_doc_id, doc.webui_doc_id, str(e)))
+                continue
+
+            # Delete from database
+            sync_manager.delete_document(doc.colibo_doc_id, knowledge_id)
+
+            success_count += 1
 
     # Print summary
     click.echo("")
@@ -441,7 +444,9 @@ def get_knowledge(knowledge_id: str = WEBUI_KNOWLEDGE_ID):
 
 
 @cli.command(name="debug:colibo:sync")
-@click.option("--root-doc-id", help="Id of the root document.", default=COLIBO_ROOT_DOC_ID)
+@click.option(
+    "--root-doc-id", help="Id of the root document.", default=COLIBO_ROOT_DOC_ID
+)
 def colibo_sync_debug(root_doc_id):
     """Debug Colibo synchronization. See the basic data from colibo without sending it to Open-webui"""
     colibo = ColiboClient(
