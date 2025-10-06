@@ -1,6 +1,6 @@
 [project]
 name = "colibo-docs-extrator"
-version = "0.1.0"
+version = "0.0.6"
 description = "Extract documents from colibo"
 requires-python = ">=3.11"
 dependencies = [
