@@ -28,6 +28,13 @@ WEBUI_BASE_URL = os.environ.get("WEBUI_BASE_URL")
 WEBUI_TOKEN = os.environ.get("WEBUI_TOKEN")
 WEBUI_KNOWLEDGE_ID = os.environ.get("WEBUI_KNOWLEDGE_ID")
 
+# SSL verification settings
+VERIFY_SSL = os.environ.get("VERIFY_SSL", "true").lower() in ("true", "1", "yes")
+if not VERIFY_SSL:
+    import urllib3
+
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("colibo-sync")
 logger.setLevel(logging.DEBUG)
@@ -67,7 +74,7 @@ def sync(
     force_update: bool = False,
 ):
     """Synchronize documents from Colibo to Open-Webui."""
-    webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
+    webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL, verify_ssl=VERIFY_SSL)
     colibo = ColiboClient(
         COLIBO_BASE_URL, COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE
     )
@@ -122,6 +129,7 @@ def sync(
             metadata={
                 "doctype": doc["doctype"],
                 "keywords": doc["keywords"],
+                "url": doc["url"],
             },
         )
         status = webui.add_file_to_knowledge(knowledge_id, res["id"])
@@ -197,6 +205,7 @@ def sync(
                     metadata={
                         "doctype": item["doctype"],
                         "keywords": item["keywords"],
+                        "url": item["url"],
                     },
                 )
                 webui_doc_id = res["id"]
@@ -246,7 +255,7 @@ def sync(
 )
 def delete_doc(colibo_id, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     """Delete a document from WebUI and mark it as deleted in the database."""
-    webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
+    webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL, verify_ssl=VERIFY_SSL)
 
     # Test knowledge exists before processing documents
     try:
@@ -296,7 +305,7 @@ def delete_doc(colibo_id, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
 )
 def delete_all_docs(confirm, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     """Delete all documents from WebUI and remove them from the database."""
-    webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
+    webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL, verify_ssl=VERIFY_SSL)
 
     # Test knowledge exists before processing documents
     try:
@@ -428,7 +437,7 @@ def list_docs():
 )
 def get_knowledge(knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     """Retrieve information about a specific knowledge resource."""
-    webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL)
+    webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL, verify_ssl=VERIFY_SSL)
 
     try:
         knowledge = webui.get_knowledge(knowledge_id)

@@ -3,9 +3,10 @@ from openwebui.exceptions import WebUINotFoundError, WebUIError
 
 
 class Client:
-    def __init__(self, token, base_url):
+    def __init__(self, token, base_url, verify_ssl):
         self.token = token
         self.base_url = base_url
+        self.verify_ssl = verify_ssl
         pass
 
     def upload_from_string(self, content, filename, content_type, metadata):
@@ -36,7 +37,9 @@ class Client:
         }  # Convert Python dict to JSON string
 
         url = f"{self.base_url}/api/v1/files/?process=true&process_in_background=false"
-        response = requests.post(url, headers=headers, data=form_data, files=files)
+        response = requests.post(
+            url, headers=headers, data=form_data, files=files, verify=self.verify_ssl
+        )
 
         # Check if the response status code is 200
         if response.status_code != 200:
@@ -66,7 +69,9 @@ class Client:
         data = {"content": content}
 
         url = f"{self.base_url}/api/v1/files/{file_id}/data/content/update"
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(
+            url, headers=headers, json=data, verify=self.verify_ssl
+        )
 
         # Check if the response status code is not 200
         if response.status_code != 200:
@@ -92,7 +97,7 @@ class Client:
         }
 
         url = f"{self.base_url}/api/v1/files/{file_id}"
-        response = requests.delete(url, headers=headers)
+        response = requests.delete(url, headers=headers, verify=self.verify_ssl)
 
         # Check if the response status code is not successful (2xx range)
         if not (200 <= response.status_code < 300):
@@ -122,7 +127,9 @@ class Client:
         data = {"file_id": file_id}
 
         url = f"{self.base_url}/api/v1/knowledge/{knowledge_id}/file/add"
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(
+            url, headers=headers, json=data, verify=self.verify_ssl
+        )
 
         # Check if the response status code is not 200
         if response.status_code != 200:
@@ -152,7 +159,9 @@ class Client:
         data = {"file_id": file_id}
 
         url = f"{self.base_url}/api/v1/knowledge/{knowledge_id}/file/remove"
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(
+            url, headers=headers, json=data, verify=self.verify_ssl
+        )
 
         # Check if the response status code is not successful (2xx range)
         if not (200 <= response.status_code < 300):
@@ -181,7 +190,7 @@ class Client:
         }
 
         url = f"{self.base_url}/api/v1/knowledge/{knowledge_id}"
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, verify=self.verify_ssl)
 
         # Check if the response status code is 200
         if response.status_code != 200:

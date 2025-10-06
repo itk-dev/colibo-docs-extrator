@@ -148,9 +148,8 @@ class Client:
             "Authorization": f"Bearer {self._get_token()}",
             "Content-Type": "application/json",
         }
-        response = requests.get(
-            f"{self.base_url}/api/documents/{document_id}", headers=headers
-        )
+        url = f"{self.base_url}/api/documents/{document_id}"
+        response = requests.get(url, headers=headers)
 
         # Check if the response is successful
         response.raise_for_status()
@@ -199,6 +198,7 @@ class Client:
             # Extract the requested fields
             return {
                 "id": json.get("id"),
+                "url": f"{self.base_url}/documents/{json.get('id')}",
                 "doctype": doctype,
                 "childCount": json.get("childCount"),
                 "created": created,
@@ -329,6 +329,7 @@ class Client:
 
             yield {
                 "id": item.get("id"),
+                "url": f"{self.base_url}/documents/{item.get('id')}",
                 "doctype": doctype,
                 "created": created,
                 "updated": updated,
