@@ -89,6 +89,7 @@ def sync(
         webui.get_knowledge(knowledge_id)
     except Exception as e:
         echo(click.style("Error accessing knowledge resource!", fg="red", bold=True))
+        echo(f"Error: {e}")
         exit(-1)
 
     # Track statistics
@@ -264,6 +265,7 @@ def delete_doc(colibo_id, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
         click.echo(
             click.style("Error accessing knowledge resource!", fg="red", bold=True)
         )
+        click.echo(f"Error: {e}")
         exit(-1)
 
     # Get a document from the database
@@ -314,6 +316,7 @@ def delete_all_docs(confirm, knowledge_id: str = WEBUI_KNOWLEDGE_ID):
         click.echo(
             click.style("Error accessing knowledge resource!", fg="red", bold=True)
         )
+        click.echo(f"Error: {e}")
         exit(-1)
 
     # Get all documents
