@@ -134,17 +134,26 @@ Arguments:
 
 ## Docker Support
 
-A Dockerfile is provided for containerized deployment.
-Build the container:
+A Dockerfile is provided for containerized deployment. Use [Task](https://taskfile.dev) to build and run it.
+
+Build the image locally:
 
 ``` bash
-docker build -t colibo-document-extrator .
+task build
 ```
 
-Run the container:
+Build and push a multi-arch image to `ghcr.io/itk-dev/colibo-docs-extrator`:
 
 ``` bash
-docker run --rm --volume .env:/app/.env --volume ./sync.db:/app/sync.db colibo-document-extrator --help
+task build:image TAG=1.0.0
+```
+
+Set `PLATFORMS=linux/amd64` to build only one architecture.
+
+Run the container (`.env` and `sync.db` are mounted):
+
+``` bash
+task run -- --help
 ```
 
 ## Todo
