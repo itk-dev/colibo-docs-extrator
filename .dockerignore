@@ -7,3 +7,8 @@
 .git
 Dockerfile
 .dockerignore
+build
+.ruff_cache
+Taskfile.yml
+README.md
+*.egg-info

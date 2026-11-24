@@ -1,3 +1,4 @@
+import json
 import requests
 from openwebui.exceptions import WebUINotFoundError, WebUIError
 
@@ -32,9 +33,7 @@ class Client:
         files = {"file": (filename, content, content_type)}
 
         # For multipart/form-data, we need to send metadata as a form field
-        form_data = {
-            "metadata": str(metadata).replace("'", '"')
-        }  # Convert Python dict to JSON string
+        form_data = {"metadata": json.dumps(metadata)}
 
         url = f"{self.base_url}/api/v1/files/?process=true&process_in_background=false"
         response = requests.post(

@@ -1,3 +1,6 @@
 .env*
 **/__pycache__
 *.db
+*.egg-info
+.venv
+build/

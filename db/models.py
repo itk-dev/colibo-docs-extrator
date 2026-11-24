@@ -2,8 +2,7 @@
 import os
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import Column, Integer, String, DateTime, Text, create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 Base = declarative_base()
 
@@ -32,7 +31,7 @@ class TokenCache(Base):
     service_name = Column(String, nullable=False, unique=True, index=True)
     access_token = Column(Text, nullable=False)
     expires_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def is_valid(self, buffer_seconds=60):
         """Check if the token is still valid with a safety buffer."""

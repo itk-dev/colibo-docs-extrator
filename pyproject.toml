@@ -1,17 +1,18 @@
 [project]
 name = "colibo-docs-extrator"
-version = "0.0.6"
+version = "0.0.7"
 description = "Extract documents from colibo"
 requires-python = ">=3.11"
 dependencies = [
-    "httpx==0.28.1",
     "requests>=2.32.3",
     "click>=8.1.0",
     "python-dotenv>=1.0.0",
     "sqlalchemy>=2.0.41",
     "markdownify>=1.1.0",
-    "poetry>=2.1.3",
 ]
+
+[tool.setuptools]
+py-modules = []
 
 [tool.black]
 line-length = 88

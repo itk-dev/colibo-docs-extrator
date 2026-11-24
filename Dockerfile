@@ -3,7 +3,7 @@ FROM python:3.13-slim
 # Set working directory
 WORKDIR /app
 
-# Copy project metadata and lock file
+# Copy project metadata
 COPY pyproject.toml ./
 
 # Install dependencies

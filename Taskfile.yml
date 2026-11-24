@@ -12,6 +12,12 @@ tasks:
       - task --list-all
     silent: true
 
+  install:
+    desc: "Create .venv again with the project dependencies (run local with .venv/bin/python main.py)"
+    cmds:
+      - python3 -m venv --clear .venv
+      - .venv/bin/python -m pip install .
+
   build:
     desc: "Build image locally for the host arch"
     cmds:

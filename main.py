@@ -1,5 +1,3 @@
-from email.policy import default
-
 import click
 import contextlib
 import logging
@@ -67,11 +65,13 @@ def silent_progressbar(iterable, **kwargs):
     default=WEBUI_KNOWLEDGE_ID,
 )
 @click.option("--force-update", is_flag=True, help="Force update all documents.")
+@click.option("--show-is-skipped", is_flag=True, help="List the skipped documents.")
 def sync(
     root_doc_id,
     quiet: bool = False,
     knowledge_id: str = WEBUI_KNOWLEDGE_ID,
     force_update: bool = False,
+    show_is_skipped: bool = False,
 ):
     """Synchronize documents from Colibo to Open-Webui."""
     webui = WebUIClient(WEBUI_TOKEN, WEBUI_BASE_URL, verify_ssl=VERIFY_SSL)
@@ -94,7 +94,7 @@ def sync(
 
     # Track statistics
     processed_count = 0
-    skipped_count = 0
+    skipped = []  # (Colibo id, title, reason)
     updated_count = 0
     new_count = 0
     failed_count = 0
@@ -166,7 +166,7 @@ def sync(
         for item in bar:
             content = build_content(item)
             if content is None:
-                skipped_count += 1
+                skipped.append((item["id"], item["title"], "no content"))
                 continue
 
             # Check if the document already exists
@@ -176,7 +176,7 @@ def sync(
                 if not force_update and (
                     item["updated"] is None or existing.last_synced >= item["updated"]
                 ):
-                    skipped_count += 1
+                    skipped.append((item["id"], item["title"], "not changed"))
                     processed_count += 1
                     continue
 
@@ -188,7 +188,7 @@ def sync(
 
                 # Update timestamp for sync in db
                 sync_manager.record_sync(
-                    colibo_doc_id=root_doc_id,
+                    colibo_doc_id=item["id"],
                     knowledge_id=knowledge_id,
                 )
 
@@ -197,6 +197,7 @@ def sync(
                 if item["doctype"] == "file":
                     # Ignore files for now.
                     # TODO: Figure out what to do with files.
+                    skipped.append((item["id"], item["title"], "file"))
                     continue
 
                 res = webui.upload_from_string(
@@ -240,7 +241,10 @@ def sync(
     echo(f"New documents created: {new_count}")
     echo(f"Existing documents updated: {updated_count}")
     echo(f"Failed to sync documents: {failed_count}")
-    echo(f"Documents skipped: {skipped_count}")
+    echo(f"Documents skipped: {len(skipped)}")
+    if show_is_skipped:
+        for doc_id, title, reason in skipped:
+            echo(f"  - {doc_id}: {title} ({reason})")
     echo("")
     echo(click.style("✓ Sync completed successfully!", fg="green", bold=True))
 
@@ -459,7 +463,8 @@ def get_knowledge(knowledge_id: str = WEBUI_KNOWLEDGE_ID):
 @click.option(
     "--root-doc-id", help="Id of the root document.", default=COLIBO_ROOT_DOC_ID
 )
-def colibo_sync_debug(root_doc_id):
+@click.option("--show-is-skipped", is_flag=True, help="List the skipped documents.")
+def colibo_sync_debug(root_doc_id, show_is_skipped: bool = False):
     """Debug Colibo synchronization. See the basic data from colibo without sending it to Open-webui"""
     colibo = ColiboClient(
         COLIBO_BASE_URL, COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE
@@ -477,10 +482,15 @@ def colibo_sync_debug(root_doc_id):
     click.echo(f"\n")
 
     counter = 0
+    skipped = []  # (Colibo id, title, reason)
     docs = colibo.get_children(doc["id"], visited_ids={root_doc_id})
     click.echo(click.style("Child docs:", fg="green", bold=True))
     for item in docs:
         counter += 1
+        if build_content(item) is None:
+            skipped.append((item["id"], item["title"], "no content"))
+        elif item["doctype"] == "file":
+            skipped.append((item["id"], item["title"], "file"))
         doctype = item["doctype"]
         doctype_color = "white"
         if doctype == "page":
@@ -497,9 +507,14 @@ def colibo_sync_debug(root_doc_id):
         click.echo(f"Title: {item['title']}")
         click.echo(f"Created at: {item['created']}")
         click.echo(f"Updated at: {item['updated']}")
-        click.echo(f"Keywords: {doc['keywords']}")
+        click.echo(f"Keywords: {item['keywords']}")
+        click.echo(f"Body length: {len(item['body'] or '')}")
         click.echo(f"\n")
     click.echo(f"Total child docs: {click.style(counter, fg='blue')}")
+    if show_is_skipped:
+        click.echo(f"Documents skipped: {len(skipped)}")
+        for doc_id, title, reason in skipped:
+            click.echo(f"  - {doc_id}: {title} ({reason})")
 
 
 @cli.command(name="debug:colibo:get-doc")

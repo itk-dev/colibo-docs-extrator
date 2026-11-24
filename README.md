@@ -20,7 +20,14 @@ structure, and upload them to your Open-WebUI knowledge base for enhanced access
 
 ## Installation
 
-TODO: write about the setup local (if not using docker image).
+Python 3.11 or later is necessary.
+
+``` bash
+task install
+.venv/bin/python main.py --help
+```
+
+As an alternative, use the Docker image. Refer to [Docker Support](#docker-support).
 
 ## Configuration
 
@@ -38,6 +45,7 @@ COLIBO_ROOT_DOC_ID=123456 # Optional, used as fallback if not given as argument
 WEBUI_BASE_URL=your_webui_url
 WEBUI_TOKEN=your_webui_token
 WEBUI_KNOWLEDGE_ID=your_knowledge_id
+VERIFY_SSL=true # Optional, set to false to skip TLS verification for Open-webui
 
 # Application
 DATABASE_URL=sqlite:///sync.db
@@ -60,6 +68,7 @@ Options:
 - `--quiet`: Suppress progress display
 - `--knowledge-id`: Knowledge id from Open-Webui
 - `--force-update`: Force update all documents
+- `--show-is-skipped`: List the skipped documents with the reason in the summary
 
 ### Delete a Document
 
@@ -117,7 +126,8 @@ python main.py debug:colibo:sync --root-doc-id XXXX
 
 Options:
 
-- : ID of the root document to debug `--root-doc-id`
+- `--root-doc-id`: ID of the root document to debug
+- `--show-is-skipped`: List the documents that `sync` skips (no content, or a file)
 
 ### Get single document from colibo
 
@@ -142,10 +152,10 @@ Build the image locally:
 task build
 ```
 
-Build and push a multi-arch image to `ghcr.io/itk-dev/colibo-docs-extrator`:
+Build and push a multi-arch image to `ghcr.io/aarhusai/colibo-docs-extrator`:
 
 ``` bash
-task build:image TAG=1.0.0
+task build:image TAG=0.0.7
 ```
 
 Set `PLATFORMS=linux/amd64` to build only one architecture.
