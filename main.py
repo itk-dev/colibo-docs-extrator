@@ -1,5 +1,6 @@
 import click
 import contextlib
+import json
 import logging
 import os
 
@@ -9,7 +10,7 @@ from colibo.client import Client as ColiboClient
 from openwebui.client import Client as WebUIClient
 from db.models import init_db
 from db.sync_manager import SyncManager
-from helpers import build_content, filename
+from helpers import build_content, filename, skip_reason
 from openwebui.exceptions import WebUIError, WebUINotFoundError
 
 load_dotenv()
@@ -98,6 +99,7 @@ def sync(
     updated_count = 0
     new_count = 0
     failed_count = 0
+    file_count = 0
 
     echo(f"Syncing root document {root_doc_id} (Colibo)")
 
@@ -164,22 +166,18 @@ def sync(
     # Process each child document with a progress bar
     with progress_context(docs, label="Syncing child documents") as bar:
         for item in bar:
-            content = build_content(item)
-            if content is None:
-                skipped.append((item["id"], item["title"], "no content"))
-                continue
-
+            file_count += item["doctype"] == "file"
             # Check if the document already exists
             existing = sync_manager.get_document(item["id"], knowledge_id)
-            if existing:
-                # Check if the document has been updated since the last sync
-                if not force_update and (
-                    item["updated"] is None or existing.last_synced >= item["updated"]
-                ):
-                    skipped.append((item["id"], item["title"], "not changed"))
+            reason = skip_reason(item, existing, force_update)
+            if reason:
+                skipped.append((item["id"], item["title"], reason))
+                if reason == "not changed":
                     processed_count += 1
-                    continue
+                continue
 
+            content = build_content(item)
+            if existing:
                 # Update existing document
                 status = webui.update_file_content(existing.webui_doc_id, content)
                 if not status:
@@ -194,12 +192,6 @@ def sync(
 
                 updated_count += 1
             else:
-                if item["doctype"] == "file":
-                    # Ignore files for now.
-                    # TODO: Figure out what to do with files.
-                    skipped.append((item["id"], item["title"], "file"))
-                    continue
-
                 res = webui.upload_from_string(
                     content=content,
                     filename=filename(item.get("title", item["id"])),
@@ -241,6 +233,7 @@ def sync(
     echo(f"New documents created: {new_count}")
     echo(f"Existing documents updated: {updated_count}")
     echo(f"Failed to sync documents: {failed_count}")
+    echo(f"Files found (not synced): {file_count}")
     echo(f"Documents skipped: {len(skipped)}")
     if show_is_skipped:
         for doc_id, title, reason in skipped:
@@ -464,7 +457,14 @@ def get_knowledge(knowledge_id: str = WEBUI_KNOWLEDGE_ID):
     "--root-doc-id", help="Id of the root document.", default=COLIBO_ROOT_DOC_ID
 )
 @click.option("--show-is-skipped", is_flag=True, help="List the skipped documents.")
-def colibo_sync_debug(root_doc_id, show_is_skipped: bool = False):
+@click.option(
+    "--knowledge-id",
+    help="Knowledge ID used to find synced documents in the database",
+    default=WEBUI_KNOWLEDGE_ID,
+)
+def colibo_sync_debug(
+    root_doc_id, show_is_skipped: bool = False, knowledge_id: str = WEBUI_KNOWLEDGE_ID
+):
     """Debug Colibo synchronization. See the basic data from colibo without sending it to Open-webui"""
     colibo = ColiboClient(
         COLIBO_BASE_URL, COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE
@@ -482,15 +482,16 @@ def colibo_sync_debug(root_doc_id, show_is_skipped: bool = False):
     click.echo(f"\n")
 
     counter = 0
+    file_count = 0
     skipped = []  # (Colibo id, title, reason)
     docs = colibo.get_children(doc["id"], visited_ids={root_doc_id})
     click.echo(click.style("Child docs:", fg="green", bold=True))
     for item in docs:
         counter += 1
-        if build_content(item) is None:
-            skipped.append((item["id"], item["title"], "no content"))
-        elif item["doctype"] == "file":
-            skipped.append((item["id"], item["title"], "file"))
+        file_count += item["doctype"] == "file"
+        reason = skip_reason(item, sync_manager.get_document(item["id"], knowledge_id))
+        if reason:
+            skipped.append((item["id"], item["title"], reason))
         doctype = item["doctype"]
         doctype_color = "white"
         if doctype == "page":
@@ -511,6 +512,7 @@ def colibo_sync_debug(root_doc_id, show_is_skipped: bool = False):
         click.echo(f"Body length: {len(item['body'] or '')}")
         click.echo(f"\n")
     click.echo(f"Total child docs: {click.style(counter, fg='blue')}")
+    click.echo(f"Files found (not synced): {click.style(file_count, fg='blue')}")
     if show_is_skipped:
         click.echo(f"Documents skipped: {len(skipped)}")
         for doc_id, title, reason in skipped:
@@ -519,12 +521,18 @@ def colibo_sync_debug(root_doc_id, show_is_skipped: bool = False):
 
 @cli.command(name="debug:colibo:get-doc")
 @click.argument("doc_id", type=int)
-def colibo_get_doc(doc_id):
+@click.option(
+    "--raw", is_flag=True, help="Print the unprocessed JSON from the Colibo API."
+)
+def colibo_get_doc(doc_id, raw: bool = False):
     """Debug Colibo document retrieval. See the basic data from colibo without sending it to Open-webui"""
     colibo = ColiboClient(
         COLIBO_BASE_URL, COLIBO_CLIENT_ID, COLIBO_CLIENT_SECRET, COLIBO_SCOPE
     )
-    doc = colibo.get_document(doc_id)
+    doc = colibo.get_document(doc_id, raw=raw)
+    if raw:
+        click.echo(json.dumps(doc, indent=2, ensure_ascii=False))
+        return
     click.echo(click.style("Document information:", fg="green", bold=True))
     click.echo(f"Fetched document {doc_id}")
     click.echo(f"Title: {doc['title']}")

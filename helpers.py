@@ -16,6 +16,24 @@ def build_content(item):
     return "\n\n".join(content_parts)
 
 
+def skip_reason(item, existing, force_update: bool = False):
+    """Give the reason that sync skips a child document, or None.
+
+    `existing` is the SyncedDocument record of the child, or None.
+    """
+    if build_content(item) is None:
+        return "no content"
+    if existing:
+        if not force_update and (
+            item["updated"] is None or existing.last_synced >= item["updated"]
+        ):
+            return "not changed"
+    elif item["doctype"] == "file":
+        # Files are ignored for now.
+        return "file"
+    return None
+
+
 def filename(doc_id: int, extension: str = "md"):
     """Build a filename for a document"""
     return str(doc_id) + "." + extension

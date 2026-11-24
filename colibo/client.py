@@ -142,7 +142,7 @@ class Client:
             print(f"An error occurred while converting HTML to Markdown: {e}")
             return None
 
-    def get_document(self, document_id):
+    def get_document(self, document_id, raw=False):
         """Get a single document by ID."""
         headers = {
             "Authorization": f"Bearer {self._get_token()}",
@@ -156,6 +156,8 @@ class Client:
 
         # Parse the JSON response
         json = response.json()
+        if raw:
+            return json
 
         if response:
             # Convert date strings to datetime objects

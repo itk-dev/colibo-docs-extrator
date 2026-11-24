@@ -127,7 +127,8 @@ python main.py debug:colibo:sync --root-doc-id XXXX
 Options:
 
 - `--root-doc-id`: ID of the root document to debug
-- `--show-is-skipped`: List the documents that `sync` skips (no content, or a file)
+- `--show-is-skipped`: List the documents that `sync` skips, with the reason
+- `--knowledge-id`: Knowledge id from Open-Webui, used to find synced documents in the database
 
 ### Get single document from colibo
 
@@ -141,6 +142,10 @@ python main.py debug:colibo:get-doc DOC_ID
 Arguments:
 
 - `DOC_ID`: The ID of the Colibo document to retrieve (required)
+
+Options:
+
+- `--raw`: Print the unprocessed JSON from the Colibo API
 
 ## Docker Support
 
